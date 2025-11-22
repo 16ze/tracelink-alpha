@@ -23,7 +23,8 @@ export type AuthActionState = {
  */
 export async function login(
   prevState: AuthActionState | null,
-  formData: FormData
+  formData: FormData,
+  locale?: string
 ): Promise<AuthActionState> {
   const supabase = await createClient();
   const email = formData.get("email") as string;
@@ -70,7 +71,8 @@ export async function login(
       revalidatePath("/", "layout");
       // Retourner un état de succès avec redirection au lieu d'utiliser redirect()
       // La redirection sera gérée côté client via useActionState
-      return { success: "Connexion réussie", redirect: "/dashboard" };
+      const currentLocale = locale || "fr";
+      return { success: "Connexion réussie", redirect: `/${currentLocale}/dashboard` };
     }
 
     return { error: "Erreur inattendue lors de la connexion" };
@@ -91,7 +93,8 @@ export async function login(
  */
 export async function signup(
   prevState: AuthActionState | null,
-  formData: FormData
+  formData: FormData,
+  locale?: string
 ): Promise<AuthActionState> {
   const supabase = await createClient();
   const email = formData.get("email") as string;
@@ -161,7 +164,8 @@ export async function signup(
       revalidatePath("/", "layout");
       // Retourner un état de succès avec redirection au lieu d'utiliser redirect()
       // La redirection sera gérée côté client via useActionState
-      return { success: "Inscription réussie", redirect: "/dashboard" };
+      const currentLocale = locale || "fr";
+      return { success: "Inscription réussie", redirect: `/${currentLocale}/dashboard` };
     }
 
     return {

@@ -47,6 +47,11 @@ export interface DatabaseBrand {
   website_url: string | null; // TEXT
   legal_info: LegalInfo | null; // JSONB
   owner_id: string | null; // UUID REFERENCES auth.users(id)
+  // Champs Stripe pour la gestion des abonnements
+  subscription_status: "free" | "active" | "canceled" | "past_due" | "trialing" | null; // TEXT DEFAULT 'free'
+  stripe_customer_id: string | null; // TEXT UNIQUE
+  stripe_subscription_id: string | null; // TEXT
+  plan_name: "free" | "pro" | "enterprise" | null; // TEXT DEFAULT 'free'
   created_at: string; // TIMESTAMPTZ (format ISO 8601)
   updated_at: string; // TIMESTAMPTZ (format ISO 8601)
 }

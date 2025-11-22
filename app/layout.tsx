@@ -1,50 +1,18 @@
-import { cn } from "@/lib/utils";
-import type { Metadata } from "next";
-import { Inter as FontSans } from "next/font/google";
-import "./globals.css";
-
-/**
- * Configuration de la police Inter
- * Cette police est optimisée pour le web et recommandée par Shadcn/ui.
- * La variable --font-sans permet de l'utiliser via Tailwind.
- */
-const fontSans = FontSans({
-  subsets: ["latin"],
-  variable: "--font-sans",
-});
-
-export const metadata: Metadata = {
-  title: "TraceLink - Passeport Numérique Produit",
-  description:
-    "Outil de Passeport Numérique Produit (DPP) pour l'industrie textile",
-};
-
 /**
  * Layout Racine (RootLayout)
  *
- * Ce composant enveloppe toute l'application.
- * Il applique :
- * 1. La langue française (lang="fr")
- * 2. Les classes de base Shadcn (min-h-screen, bg-background, font-sans, antialiased)
- * 3. La variable CSS de la police
+ * IMPORTANT: Avec next-intl et localePrefix: "always", ce layout NE DOIT PAS
+ * contenir de balises <html> ou <body>. Ces balises sont gérées par le layout
+ * [locale]/layout.tsx pour permettre la configuration dynamique de la langue.
  *
- * @param children - Les composants enfants à rendre (les pages)
+ * Ce layout sert uniquement de wrapper pour les routes sans locale (comme /auth/callback).
+ *
+ * @param children - Les composants enfants à rendre
  */
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return (
-    <html lang="fr" suppressHydrationWarning>
-      <body
-        className={cn(
-          "min-h-screen bg-background font-sans antialiased",
-          fontSans.variable
-        )}
-      >
-        {children}
-      </body>
-    </html>
-  );
+  return children;
 }

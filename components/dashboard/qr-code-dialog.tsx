@@ -58,9 +58,14 @@ export function QRCodeDialog({
   const [passportUrl, setPassportUrl] = useState<string>("");
 
   // Génération de l'URL du passeport (côté client uniquement)
+  // Utilise la locale par défaut (fr) - le middleware redirigera si nécessaire
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setPassportUrl(`${window.location.origin}/p/${productId}`);
+      // Détecter la locale depuis l'URL actuelle ou utiliser 'fr' par défaut
+      const pathname = window.location.pathname;
+      const localeMatch = pathname.match(/^\/([a-z]{2})\//);
+      const locale = localeMatch ? localeMatch[1] : "fr";
+      setPassportUrl(`${window.location.origin}/${locale}/p/${productId}`);
     }
   }, [productId]);
 

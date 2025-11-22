@@ -20,7 +20,7 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/components/ui/alert";
-import { createBrand, type BrandActionState } from "@/app/dashboard/actions";
+import { createBrand, type BrandActionState } from "@/lib/dashboard-actions";
 import { CheckCircle2, AlertCircle, Building2 } from "lucide-react";
 
 /**

@@ -1,5 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
+import createMiddleware from "next-intl/middleware";
 import { NextResponse, type NextRequest } from "next/server";
+import { defaultLocale, locales, routing } from "./i18n";
+
+// Middleware next-intl pour la gestion des locales
+const intlMiddleware = createMiddleware({
+  ...routing,
+  localeDetection: true, // Détecte automatiquement la langue du navigateur
+});
 
 /**
  * Middleware pour gérer l'authentification et la protection des routes
@@ -8,7 +16,8 @@ import { NextResponse, type NextRequest } from "next/server";
  * 1. Rafraîchit automatiquement la session Supabase
  * 2. Protège les routes privées (dashboard)
  * 3. Redirige les utilisateurs connectés depuis login/home vers dashboard
- * 4. Exclut les routes publiques et les routes d'authentification
+ * 4. Gère la détection de la langue avec next-intl
+ * 5. Exclut les routes publiques et les routes d'authentification
  */
 export async function middleware(request: NextRequest) {
   // Exclure la route de callback d'authentification
@@ -17,10 +26,26 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Exclure les routes publiques de passeport (/p/*)
-  // Ces routes doivent être accessibles sans authentification
-  if (request.nextUrl.pathname.startsWith("/p/")) {
-    return NextResponse.next();
+  // Toujours appeler le middleware next-intl en premier pour configurer le contexte
+  // Il gère automatiquement les routes avec et sans locale
+  const pathname = request.nextUrl.pathname;
+  const pathnameHasLocale = locales.some(
+    (locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`
+  );
+
+  // Si la route n'a pas de locale, laisser next-intl gérer la redirection
+  if (!pathnameHasLocale && !pathname.startsWith("/auth/")) {
+    return intlMiddleware(request);
+  }
+
+  // Pour les routes avec locale, appeler next-intl pour configurer le contexte
+  // puis continuer avec notre logique personnalisée
+  if (pathnameHasLocale) {
+    const intlResponse = intlMiddleware(request);
+    // Si next-intl a redirigé, retourner la redirection
+    if (intlResponse.status === 307 || intlResponse.status === 308) {
+      return intlResponse;
+    }
   }
 
   // Vérification des variables d'environnement
@@ -28,7 +53,9 @@ export async function middleware(request: NextRequest) {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    console.error("Variables d'environnement Supabase manquantes dans middleware");
+    console.error(
+      "Variables d'environnement Supabase manquantes dans middleware"
+    );
     // En cas d'erreur de configuration, on laisse passer la requête
     // mais on ne peut pas protéger les routes
     return NextResponse.next();
@@ -75,26 +102,42 @@ export async function middleware(request: NextRequest) {
     // Si une erreur survient lors de la récupération de l'utilisateur,
     // on continue avec user = null (utilisateur non connecté)
     if (error) {
-      console.warn("Erreur lors de la récupération de l'utilisateur:", error.message);
+      console.warn(
+        "Erreur lors de la récupération de l'utilisateur:",
+        error.message
+      );
     }
 
-    // Identification des routes
-    const isDashboard = request.nextUrl.pathname.startsWith("/dashboard");
-    const isLoginPage = request.nextUrl.pathname.startsWith("/login");
-    const isHomePage = request.nextUrl.pathname === "/";
+    // Identification des routes (en tenant compte des locales)
+    const pathname = request.nextUrl.pathname;
+    const pathnameWithoutLocale = pathname.replace(/^\/[a-z]{2}\//, "/"); // Retirer /fr/ ou /en/
+
+    const isDashboard = pathnameWithoutLocale.startsWith("/dashboard");
+    const isLoginPage = pathnameWithoutLocale.startsWith("/login");
+    const isHomePage =
+      pathnameWithoutLocale === "/" || pathname.match(/^\/[a-z]{2}\/?$/);
 
     // Protection des routes privées
     // Si l'utilisateur n'est PAS connecté et essaie d'accéder au dashboard
     if (isDashboard && !user) {
-      return NextResponse.redirect(new URL("/login", request.url));
+      // Conserver la locale si présente
+      const locale = pathname.match(/^\/([a-z]{2})\//)?.[1] || defaultLocale;
+      return NextResponse.redirect(new URL(`/${locale}/login`, request.url));
     }
 
     // Redirection des utilisateurs connectés
-    // Si l'utilisateur EST connecté et essaie d'accéder au login ou à la home
-    if ((isLoginPage || isHomePage) && user) {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
+    // Si l'utilisateur EST connecté et essaie d'accéder au login, le rediriger vers le dashboard
+    // NOTE: On laisse l'accès à la home page (landing page) même pour les utilisateurs connectés
+    if (isLoginPage && user) {
+      // Conserver la locale si présente
+      const locale = pathname.match(/^\/([a-z]{2})\//)?.[1] || defaultLocale;
+      return NextResponse.redirect(
+        new URL(`/${locale}/dashboard`, request.url)
+      );
     }
 
+    // Le middleware next-intl a déjà été appliqué si nécessaire
+    // Continuer avec notre logique personnalisée pour les routes avec locale
     return response;
   } catch (err) {
     // En cas d'erreur inattendue, on log et on laisse passer la requête
@@ -125,4 +168,3 @@ export const config = {
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
-

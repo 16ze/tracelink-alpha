@@ -28,7 +28,7 @@ import {
 import {
   uploadCertificate,
   type CertificateActionState,
-} from "@/app/dashboard/actions";
+} from "@/lib/dashboard-actions";
 import { CheckCircle2, AlertCircle, Upload as UploadIcon } from "lucide-react";
 
 /**

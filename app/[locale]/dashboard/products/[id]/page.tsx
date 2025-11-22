@@ -17,7 +17,7 @@ import {
   getProductById,
   getProductComponents,
   getComponentCertificates,
-} from "@/app/dashboard/actions";
+} from "../../actions";
 import type { DatabaseProduct, DatabaseComponent } from "@/types/supabase";
 import { ProductGeneralTab } from "@/components/dashboard/product-general-tab";
 import { ProductCompositionTab } from "@/components/dashboard/product-composition-tab";
@@ -34,9 +34,9 @@ import { ProductQRButton } from "@/components/dashboard/product-qr-button";
 export default async function ProductDetailPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ locale: string; id: string }>;
 }) {
-  const { id } = await params;
+  const { locale, id } = await params;
   const supabase = await createClient();
 
   // Vérification de l'authentification
@@ -45,7 +45,7 @@ export default async function ProductDetailPage({
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    redirect(`/${locale}/login`);
   }
 
   // Récupération du produit avec vérification de propriété
@@ -80,14 +80,14 @@ export default async function ProductDetailPage({
         {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm text-muted-foreground">
           <Link
-            href="/dashboard"
+            href={`/${locale}/dashboard`}
             className="hover:text-foreground transition-colors"
           >
             Dashboard
           </Link>
           <span>/</span>
           <Link
-            href="/dashboard"
+            href={`/${locale}/dashboard`}
             className="hover:text-foreground transition-colors"
           >
             Produits
@@ -102,7 +102,7 @@ export default async function ProductDetailPage({
             <div className="flex flex-col lg:flex-row gap-6">
               {/* Photo et infos principales */}
               <div className="flex items-start gap-4 flex-1">
-                <Link href="/dashboard">
+                <Link href={`/${locale}/dashboard`}>
                   <Button variant="outline" size="icon" className="shrink-0">
                     <ArrowLeft className="h-4 w-4" />
                   </Button>
@@ -155,7 +155,7 @@ export default async function ProductDetailPage({
 
               {/* Actions rapides */}
               <div className="flex flex-col sm:flex-row lg:flex-col gap-2 shrink-0">
-                <Link href={`/p/${product.id}`} target="_blank">
+                <Link href={`/${locale}/p/${product.id}`} target="_blank">
                   <Button variant="outline" className="w-full gap-2">
                     <ExternalLink className="h-4 w-4" />
                     Voir le passeport

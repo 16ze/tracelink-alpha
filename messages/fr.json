@@ -1,0 +1,32 @@
+{
+  "passport": {
+    "passport_title": "Passeport Numérique",
+    "reference": "Référence",
+    "created_at": "Date de création",
+    "description": "Description",
+    "composition_title": "Composition & Traçabilité",
+    "origin": "Provenance :",
+    "verified": "Vérifié",
+    "download_cert": "Télécharger le certificat",
+    "footer": "Propulsé par TraceLink"
+  },
+  "common": {
+    "notFound": "Produit introuvable",
+    "error": "Une erreur est survenue"
+  },
+  "landing": {
+    "pricing_title": "Des tarifs simples et transparents",
+    "pricing_subtitle": "Commencez gratuitement, payez quand vous grandissez.",
+    "plan_free": "Découverte",
+    "plan_pro": "Pro",
+    "plan_enterprise": "Entreprise",
+    "price_free": "0 €",
+    "price_pro": "29 €",
+    "period": "/ mois",
+    "cta_free": "Commencer",
+    "cta_pro": "Passer Pro",
+    "cta_contact": "Contacter les ventes",
+    "feature_products": "produits",
+    "feature_certificates": "Certificats PDF"
+  }
+}

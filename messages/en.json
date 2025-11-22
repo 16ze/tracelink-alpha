@@ -1,0 +1,32 @@
+{
+  "passport": {
+    "passport_title": "Digital Passport",
+    "reference": "Reference",
+    "description": "Description",
+    "composition_title": "Composition & Traceability",
+    "origin": "Origin:",
+    "verified": "Verified",
+    "created_at": "Creation Date",
+    "footer": "Powered by TraceLink",
+    "download_cert": "Download certificate"
+  },
+  "common": {
+    "notFound": "Product not found",
+    "error": "An error occurred"
+  },
+  "landing": {
+    "pricing_title": "Simple and transparent pricing",
+    "pricing_subtitle": "Start for free, pay as you grow.",
+    "plan_free": "Discovery",
+    "plan_pro": "Pro",
+    "plan_enterprise": "Enterprise",
+    "price_free": "€0",
+    "price_pro": "€29",
+    "period": "/ month",
+    "cta_free": "Start now",
+    "cta_pro": "Go Pro",
+    "cta_contact": "Contact Sales",
+    "feature_products": "products",
+    "feature_certificates": "PDF Certificates"
+  }
+}

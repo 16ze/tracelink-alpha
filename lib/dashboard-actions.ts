@@ -246,7 +246,8 @@ export async function getUserProducts(): Promise<DatabaseProduct[]> {
  */
 export async function createProduct(
   prevState: ProductActionState | null,
-  formData: FormData
+  formData: FormData,
+  locale?: string
 ): Promise<ProductActionState> {
   const supabase = await createClient();
 
@@ -384,11 +385,12 @@ export async function createProduct(
     }
 
     // Révalidation du cache et redirection
-    revalidatePath("/dashboard", "layout");
-    revalidatePath("/dashboard/products", "layout");
+    const currentLocale = locale || "fr";
+    revalidatePath(`/${currentLocale}/dashboard`, "layout");
+    revalidatePath(`/${currentLocale}/dashboard/products`, "layout");
     return {
       success: "Produit créé avec succès !",
-      redirect: "/dashboard",
+      redirect: `/${currentLocale}/dashboard`,
     };
   } catch (err) {
     console.error("Erreur inattendue lors de la création du produit:", err);

@@ -29,7 +29,7 @@ import { ComponentTableRow } from "./component-table-row";
 import {
   addComponent,
   type ComponentActionState,
-} from "@/app/dashboard/actions";
+} from "@/lib/dashboard-actions";
 import type { DatabaseComponent, DatabaseCertificate } from "@/types/supabase";
 import {
   CheckCircle2,

@@ -15,16 +15,20 @@ import { NextResponse } from "next/server";
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
-  const next = requestUrl.searchParams.get("next") ?? "/dashboard";
+  const next = requestUrl.searchParams.get("next") ?? "/fr/dashboard"; // Locale par défaut
   const error = requestUrl.searchParams.get("error");
   const errorDescription = requestUrl.searchParams.get("error_description");
   const origin = requestUrl.origin;
+  
+  // Détection de la locale depuis le header Accept-Language ou utilisation de 'fr' par défaut
+  const acceptLanguage = request.headers.get("accept-language");
+  const locale = acceptLanguage?.startsWith("en") ? "en" : "fr";
 
   // Gestion des erreurs OAuth (si présentes dans l'URL)
   if (error) {
     console.error("Erreur OAuth dans callback:", error, errorDescription);
     return NextResponse.redirect(
-      `${origin}/login?error=${encodeURIComponent(
+      `${origin}/${locale}/login?error=${encodeURIComponent(
         errorDescription || "Erreur d'authentification"
       )}`
     );
@@ -33,7 +37,7 @@ export async function GET(request: Request) {
   // Si un code est présent, on l'échange contre une session
   if (code) {
     const cookieStore = await cookies();
-
+    
     // Vérification des variables d'environnement
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -41,7 +45,7 @@ export async function GET(request: Request) {
     if (!supabaseUrl || !supabaseAnonKey) {
       console.error("Variables d'environnement Supabase manquantes");
       return NextResponse.redirect(
-        `${origin}/login?error=${encodeURIComponent(
+        `${origin}/${locale}/login?error=${encodeURIComponent(
           "Configuration serveur invalide"
         )}`
       );
@@ -74,20 +78,24 @@ export async function GET(request: Request) {
       if (exchangeError) {
         console.error("Erreur lors de l'échange du code:", exchangeError);
         return NextResponse.redirect(
-          `${origin}/login?error=${encodeURIComponent(
+          `${origin}/${locale}/login?error=${encodeURIComponent(
             exchangeError.message || "Erreur lors de la confirmation"
           )}`
         );
-      }
+    }
 
       // Vérification que l'utilisateur est bien créé et authentifié
       if (data.user && data.session) {
         // Redirection vers la page demandée (ou dashboard par défaut)
-        return NextResponse.redirect(`${origin}${next}`);
+        // Si next n'a pas de locale, on l'ajoute
+        const redirectPath = next.startsWith(`/${locale}/`) || next.startsWith("/fr/") || next.startsWith("/en/") 
+          ? next 
+          : `/${locale}${next}`;
+        return NextResponse.redirect(`${origin}${redirectPath}`);
       } else {
         console.error("Session invalide après échange du code");
         return NextResponse.redirect(
-          `${origin}/login?error=${encodeURIComponent(
+          `${origin}/${locale}/login?error=${encodeURIComponent(
             "Impossible de créer la session"
           )}`
         );
@@ -95,7 +103,7 @@ export async function GET(request: Request) {
     } catch (err) {
       console.error("Erreur inattendue dans le callback:", err);
       return NextResponse.redirect(
-        `${origin}/login?error=${encodeURIComponent(
+        `${origin}/${locale}/login?error=${encodeURIComponent(
           "Une erreur inattendue est survenue"
         )}`
       );
@@ -105,7 +113,7 @@ export async function GET(request: Request) {
   // Si aucun code n'est présent, c'est une erreur
   console.warn("Callback appelé sans code d'authentification");
   return NextResponse.redirect(
-    `${origin}/login?error=${encodeURIComponent(
+    `${origin}/${locale}/login?error=${encodeURIComponent(
       "Code d'authentification manquant"
     )}`
   );

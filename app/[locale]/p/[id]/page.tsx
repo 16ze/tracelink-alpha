@@ -1,20 +1,23 @@
 import { createClient } from "@/utils/supabase/server";
-import { notFound } from "next/navigation";
 import Image from "next/image";
+import { notFound } from "next/navigation";
+// On utilise la méthode standard pour récupérer les traductions
+import { CertificateDownloadButton } from "@/components/public/certificate-download-button";
+import { LanguageSwitcher } from "@/components/public/language-switcher";
 import type {
-  DatabaseProduct,
   DatabaseBrand,
-  DatabaseComponent,
   DatabaseCertificate,
+  DatabaseComponent,
+  DatabaseProduct,
 } from "@/types/supabase";
 import {
-  Package,
-  Scissors,
+  Box,
   CircleDot,
   Link as LinkIcon,
-  Box,
+  Package,
+  Scissors,
 } from "lucide-react";
-import { CertificateDownloadButton } from "@/components/public/certificate-download-button";
+import { getTranslations } from "next-intl/server";
 
 /**
  * Type pour le produit avec sa marque et ses composants avec certificats
@@ -44,20 +47,23 @@ function getComponentIcon(type: string) {
  *
  * Accessible sans authentification.
  * Design mobile-first pour être consulté sur smartphone.
- *
- * @param params - Paramètres de la route contenant l'ID du produit
  */
 export default async function ProductPassportPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ locale: string; id: string }>;
 }) {
-  const { id } = await params;
+  // 1. Récupération des paramètres (Next.js 15 style)
+  const { locale, id } = await params;
+
+  // 2. Chargement des traductions pour le namespace 'passport'
+  // C'est ici que la magie opère. Si tes JSON sont bons, t('key') renverra le texte.
+  const t = await getTranslations({ locale, namespace: "passport" });
+
   const supabase = await createClient();
 
   try {
-    // Récupération du produit avec sa marque et ses composants avec leurs certificats
-    // Utilisation de la clé anon pour permettre l'accès public
+    // 3. Récupération des données Supabase
     const { data, error } = await supabase
       .from("products")
       .select("*, brands(*), components(*, certificates(*))")
@@ -65,13 +71,13 @@ export default async function ProductPassportPage({
       .single();
 
     if (error || !data) {
-      console.error("Erreur lors de la récupération du produit:", error);
+      console.error("Erreur Supabase:", error);
       notFound();
     }
 
     const product = data as ProductWithBrand;
 
-    // Tri des composants par date de création (plus récents en premier)
+    // Tri des composants
     if (product.components) {
       product.components.sort(
         (a, b) =>
@@ -79,47 +85,58 @@ export default async function ProductPassportPage({
       );
     }
 
-    // Formatage de la date de création
+    // 4. Formatage de la date selon la langue
     const createdDate = new Date(product.created_at);
-    const formattedDate = new Intl.DateTimeFormat("fr-FR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    }).format(createdDate);
+    const formattedDate = new Intl.DateTimeFormat(
+      locale === "en" ? "en-US" : "fr-FR",
+      {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }
+    ).format(createdDate);
 
     return (
       <div className="min-h-screen bg-background flex flex-col">
-        {/* Header : Logo de la marque + Nom de la marque */}
-        <header className="border-b bg-card">
+        {/* Header */}
+        <header className="border-b bg-card relative">
           <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center gap-3">
-              {product.brands.logo_url ? (
-                <div className="relative h-12 w-12 rounded-md overflow-hidden border">
-                  <Image
-                    src={product.brands.logo_url}
-                    alt={product.brands.name}
-                    fill
-                    className="object-cover"
-                    sizes="48px"
-                  />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {product.brands.logo_url ? (
+                  <div className="relative h-12 w-12 rounded-md overflow-hidden border">
+                    <Image
+                      src={product.brands.logo_url}
+                      alt={product.brands.name}
+                      fill
+                      className="object-cover"
+                      sizes="48px"
+                    />
+                  </div>
+                ) : (
+                  <div className="h-12 w-12 rounded-md bg-muted flex items-center justify-center">
+                    <Package className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                )}
+                <div>
+                  <h1 className="text-lg font-semibold">
+                    {product.brands.name}
+                  </h1>
+                  <p className="text-xs text-muted-foreground">
+                    {t("passport_title")}
+                  </p>
                 </div>
-              ) : (
-                <div className="h-12 w-12 rounded-md bg-muted flex items-center justify-center">
-                  <Package className="h-6 w-6 text-muted-foreground" />
-                </div>
-              )}
-              <div>
-                <h1 className="text-lg font-semibold">{product.brands.name}</h1>
-                <p className="text-xs text-muted-foreground">Passeport Numérique</p>
               </div>
+              {/* Sélecteur de langue */}
+              <LanguageSwitcher currentLocale={locale} productId={id} />
             </div>
           </div>
         </header>
 
-        {/* Contenu principal : Produit à gauche, Caractéristiques à droite */}
+        {/* Main Content */}
         <main className="flex-1 container mx-auto px-4 py-6 lg:py-12">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
-            {/* Colonne de gauche : Photo du produit */}
+            {/* Photo */}
             <section className="w-full">
               <div className="sticky top-6">
                 <div className="aspect-square bg-muted rounded-lg overflow-hidden border shadow-sm">
@@ -141,9 +158,9 @@ export default async function ProductPassportPage({
               </div>
             </section>
 
-            {/* Colonne de droite : Caractéristiques du produit */}
+            {/* Details */}
             <section className="flex flex-col justify-center space-y-6 lg:space-y-8">
-              {/* Nom du produit */}
+              {/* Nom Produit */}
               <div>
                 <h2 className="text-3xl lg:text-4xl font-bold tracking-tight">
                   {product.name}
@@ -152,9 +169,9 @@ export default async function ProductPassportPage({
 
               {/* SKU */}
               <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                  Référence
-                </p>
+                <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                  {t("reference")}
+                </h3>
                 <code className="inline-block text-base bg-muted px-4 py-2 rounded font-mono border">
                   {product.sku}
                 </code>
@@ -163,29 +180,27 @@ export default async function ProductPassportPage({
               {/* Description */}
               {product.description && (
                 <div className="space-y-2">
-                  <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                    Description
-                  </p>
+                  <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                    {t("description")}
+                  </h3>
                   <p className="text-base leading-relaxed text-foreground">
                     {product.description}
                   </p>
                 </div>
               )}
 
-              {/* Composition & Traçabilité */}
+              {/* Composition */}
               {product.components && product.components.length > 0 && (
                 <div className="space-y-3">
-                  <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                    Composition & Traçabilité
-                  </p>
+                  <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                    {t("composition_title")}
+                  </h3>
                   <div className="space-y-2">
                     {product.components.map((component) => {
-                      // Récupération de l'icône selon le type de composant
                       const IconComponent = getComponentIcon(component.type);
-                      
-                      // Vérification si le composant a un certificat
                       const hasCertificate =
-                        component.certificates && component.certificates.length > 0;
+                        component.certificates &&
+                        component.certificates.length > 0;
                       const certificate = hasCertificate
                         ? component.certificates![0]
                         : null;
@@ -211,12 +226,15 @@ export default async function ProductPassportPage({
                               )}
                             </div>
                             <p className="text-xs text-muted-foreground">
-                              Provenance : {component.origin_country}
+                              <span>{t("origin")}</span>{" "}
+                              {component.origin_country}
                             </p>
                             {hasCertificate && certificate && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                Certificat : {certificate.type}
-                              </p>
+                              <div className="flex items-center gap-1 mt-1">
+                                <span className="text-xs text-muted-foreground">
+                                  {t("verified")}
+                                </span>
+                              </div>
                             )}
                           </div>
                         </div>
@@ -226,33 +244,31 @@ export default async function ProductPassportPage({
                 </div>
               )}
 
-              {/* Date de création */}
+              {/* Date Création */}
               <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                  Date de création
-                </p>
+                <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                  {t("created_at")}
+                </h3>
                 <p className="text-base text-foreground">{formattedDate}</p>
               </div>
 
-              {/* Séparateur */}
+              {/* Footer Section */}
               <div className="border-t pt-6 lg:pt-8">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Package className="h-4 w-4" />
-                  <span>TraceLink - Digital Passport</span>
+                  <span>{t("footer")}</span>
                 </div>
               </div>
             </section>
           </div>
         </main>
 
-        {/* Footer : Mention TraceLink (sur mobile uniquement, déjà dans le contenu sur desktop) */}
+        {/* Mobile Footer */}
         <footer className="border-t bg-card lg:hidden mt-auto">
           <div className="container mx-auto px-4 py-4">
             <div className="flex items-center justify-center gap-2">
               <Package className="h-4 w-4 text-muted-foreground" />
-              <p className="text-xs text-muted-foreground">
-                TraceLink - Digital Passport
-              </p>
+              <p className="text-xs text-muted-foreground">{t("footer")}</p>
             </div>
           </div>
         </footer>
@@ -270,9 +286,12 @@ export default async function ProductPassportPage({
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ locale: string; id: string }>;
 }) {
-  const { id } = await params;
+  const { locale, id } = await params;
+
+  // On utilise le même namespace "passport" pour éviter les erreurs si "common" n'existe pas
+  const t = await getTranslations({ locale, namespace: "passport" });
   const supabase = await createClient();
 
   try {
@@ -284,7 +303,7 @@ export async function generateMetadata({
 
     if (!data) {
       return {
-        title: "Produit introuvable - TraceLink",
+        title: `${t("notFound")} - TraceLink`,
       };
     }
 
@@ -296,22 +315,17 @@ export async function generateMetadata({
     };
 
     return {
-      title: `${product.name} - Passeport Numérique | TraceLink`,
-      description:
-        product.description ||
-        `Passeport numérique du produit ${product.name} de ${product.brands.name}`,
+      title: `${product.name} - ${t("passport_title")} | TraceLink`,
+      description: product.description || "",
       openGraph: {
-        title: `${product.name} - Passeport Numérique`,
-        description:
-          product.description ||
-          `Passeport numérique du produit ${product.name}`,
+        title: `${product.name} - ${t("passport_title")}`,
+        description: product.description || "",
         images: product.photo_url ? [product.photo_url] : [],
       },
     };
   } catch {
     return {
-      title: "Produit - TraceLink",
+      title: "TraceLink",
     };
   }
 }
-

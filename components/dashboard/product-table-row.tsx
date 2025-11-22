@@ -16,6 +16,10 @@ interface ProductTableRowProps {
    * Produit à afficher dans la ligne
    */
   product: DatabaseProduct;
+  /**
+   * Locale pour les liens
+   */
+  locale: string;
 }
 
 /**
@@ -24,7 +28,7 @@ interface ProductTableRowProps {
  * Affiche les informations du produit et un bouton pour générer le QR Code.
  * Gère l'ouverture/fermeture de la modale QR Code.
  */
-export function ProductTableRow({ product }: ProductTableRowProps) {
+export function ProductTableRow({ product, locale }: ProductTableRowProps) {
   const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
 
   // Formatage de la date
@@ -64,7 +68,7 @@ export function ProductTableRow({ product }: ProductTableRowProps) {
         </TableCell>
         <TableCell>
           <div className="flex items-center gap-2 justify-end">
-            <Link href={`/dashboard/products/${product.id}`}>
+            <Link href={`/${locale}/dashboard/products/${product.id}`}>
               <Button variant="outline" size="sm" className="gap-2">
                 <Eye className="h-4 w-4" />
                 Détails

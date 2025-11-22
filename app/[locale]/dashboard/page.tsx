@@ -19,12 +19,14 @@ import { Logo } from "@/components/logo";
 
 /**
  * Action serveur pour la déconnexion
+ * Cette fonction accepte la locale dans FormData et déconnecte l'utilisateur
  */
-async function logoutAction() {
+async function logoutAction(formData: FormData) {
   "use server";
+  const locale = formData.get("locale") as string;
   const supabase = await createClient();
   await supabase.auth.signOut();
-  redirect("/login");
+  redirect(`/${locale}/login`);
 }
 
 /**
@@ -35,7 +37,12 @@ async function logoutAction() {
  * Scénario A (Pas de marque) : Affiche le formulaire de création de marque
  * Scénario B (Marque existante) : Affiche un message de bienvenue et les actions possibles
  */
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
   const supabase = await createClient();
 
   // Récupération de l'utilisateur connecté
@@ -46,7 +53,7 @@ export default async function DashboardPage() {
   // Si l'utilisateur n'est pas connecté, redirection vers login
   // (normalement géré par le middleware, mais sécurité supplémentaire)
   if (!user) {
-    redirect("/login");
+    redirect(`/${locale}/login`);
   }
 
   // Récupération de la marque de l'utilisateur
@@ -60,8 +67,9 @@ export default async function DashboardPage() {
       <div className="max-w-7xl mx-auto space-y-8">
         {/* En-tête */}
         <div className="flex items-center justify-between">
-          <Logo size="md" href="/dashboard" />
+          <Logo size="md" href={`/${locale}/dashboard`} />
           <form action={logoutAction}>
+            <input type="hidden" name="locale" value={locale} />
             <Button type="submit" variant="outline" className="gap-2">
               <LogOut className="h-4 w-4" />
               Déconnexion
@@ -88,7 +96,7 @@ export default async function DashboardPage() {
                   Gérez vos produits et créez vos passeports numériques
                 </p>
               </div>
-              <Link href="/dashboard/products/new">
+              <Link href={`/${locale}/dashboard/products/new`}>
                 <Button className="gap-2">
                   <Plus className="h-4 w-4" />
                   Nouveau Produit
@@ -115,7 +123,7 @@ export default async function DashboardPage() {
                     <br />
                     Créez votre premier produit pour commencer !
                   </p>
-                  <Link href="/dashboard/products/new">
+                  <Link href={`/${locale}/dashboard/products/new`}>
                     <Button className="gap-2">
                       <Plus className="h-4 w-4" />
                       Créer un premier produit
@@ -146,7 +154,7 @@ export default async function DashboardPage() {
                     </TableHeader>
                     <TableBody>
                       {products.map((product) => (
-                        <ProductTableRow key={product.id} product={product} />
+                        <ProductTableRow key={product.id} product={product} locale={locale} />
                       ))}
                     </TableBody>
                   </Table>

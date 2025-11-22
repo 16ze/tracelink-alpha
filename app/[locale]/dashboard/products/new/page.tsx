@@ -1,9 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, use, useEffect } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,7 +21,7 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/components/ui/alert";
-import { createProduct, type ProductActionState } from "@/app/dashboard/actions";
+import { createProduct, type ProductActionState } from "../../actions";
 import { CheckCircle2, AlertCircle, Package, ArrowLeft, Upload } from "lucide-react";
 
 /**
@@ -43,12 +42,24 @@ function SubmitButton({ children }: { children: React.ReactNode }) {
  * Affiche un formulaire permettant de créer un nouveau produit
  * avec upload d'image vers Supabase Storage.
  */
-export default function NewProductPage() {
+export default function NewProductPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const resolvedParams = use(params);
+  const locale = resolvedParams.locale;
   const router = useRouter();
+
+  // Créer un wrapper pour passer la locale
+  const createProductWithLocale = async (
+    prevState: ProductActionState | null,
+    formData: FormData
+  ) => createProduct(prevState, formData, locale);
 
   // État pour le formulaire avec useActionState (React 19)
   const [state, formAction] = useActionState<ProductActionState | null, FormData>(
-    createProduct,
+    createProductWithLocale,
     null
   );
 
@@ -64,7 +75,7 @@ export default function NewProductPage() {
       <div className="max-w-3xl mx-auto space-y-6">
         {/* En-tête avec bouton retour */}
         <div className="flex items-center gap-4">
-          <Link href="/dashboard">
+          <Link href={`/${locale}/dashboard`}>
             <Button variant="outline" size="icon">
               <ArrowLeft className="h-4 w-4" />
             </Button>
@@ -192,7 +203,7 @@ export default function NewProductPage() {
               </div>
             </CardContent>
             <CardFooter className="flex gap-4">
-              <Link href="/dashboard" className="flex-1">
+              <Link href={`/${locale}/dashboard`} className="flex-1">
                 <Button type="button" variant="outline" className="w-full">
                   Annuler
                 </Button>

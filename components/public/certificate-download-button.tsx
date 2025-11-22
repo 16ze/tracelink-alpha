@@ -1,6 +1,7 @@
 "use client";
 
 import { FileText } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { DatabaseCertificate } from "@/types/supabase";
 
 /**
@@ -24,6 +25,8 @@ export function CertificateDownloadButton({
   certificate,
   componentName,
 }: CertificateDownloadButtonProps) {
+  const t = useTranslations("passport");
+  
   const handleDownload = () => {
     const link = document.createElement("a");
     link.href = certificate.file_url;
@@ -40,8 +43,8 @@ export function CertificateDownloadButton({
     <button
       onClick={handleDownload}
       className="p-1 rounded hover:bg-muted transition-colors"
-      title={`Télécharger le certificat ${certificate.type}`}
-      aria-label={`Télécharger le certificat ${certificate.type}`}
+      title={t("download_cert")}
+      aria-label={t("download_cert")}
     >
       <FileText className="h-4 w-4 text-primary" />
     </button>
