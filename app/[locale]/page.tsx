@@ -337,7 +337,7 @@ export default async function LandingPage({
                     <span className="text-sm">Support prioritaire</span>
                   </li>
                 </ul>
-                <ProButton locale={locale} label={t("cta_pro")} />
+                <ProButton locale={locale} label={t("cta_pro")} className="w-full" />
               </CardContent>
             </Card>
 

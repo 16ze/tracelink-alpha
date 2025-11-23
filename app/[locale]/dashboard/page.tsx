@@ -1,8 +1,10 @@
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Table,
   TableBody,
@@ -11,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Package, LogOut, Plus } from "lucide-react";
+import { Package, LogOut, Plus, CheckCircle2 } from "lucide-react";
 import { getUserBrand, getUserProducts } from "./actions";
 import { CreateBrandForm } from "@/components/dashboard/create-brand-form";
 import { ProductTableRow } from "@/components/dashboard/product-table-row";
@@ -41,11 +43,24 @@ async function logoutAction(formData: FormData) {
  */
 export default async function DashboardPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const { locale } = await params;
+  const searchParamsResolved = await searchParams;
   const supabase = await createClient();
+  
+  // Détection du retour de paiement réussi
+  const isPaymentSuccess = 
+    searchParamsResolved.checkout === "success" || 
+    searchParamsResolved.success === "true";
+  
+  // Force le rafraîchissement des données si le paiement vient d'être effectué
+  if (isPaymentSuccess) {
+    revalidatePath(`/${locale}/dashboard`);
+  }
 
   // Récupération de l'utilisateur connecté
   const {
@@ -68,11 +83,25 @@ export default async function DashboardPage({
   const stripeConfigured = isStripeConfigured();
   // Un utilisateur est en mode gratuit si sa marque a un statut différent de "active"
   // Condition simplifiée : subscription_status !== 'active'
-  const isFreePlan = brand ? brand.subscription_status !== "active" : false;
+  // Masquer le bouton de manière optimiste si le paiement vient d'être effectué
+  const isFreePlan = brand 
+    ? brand.subscription_status !== "active" && !isPaymentSuccess
+    : false;
 
   return (
     <main className="min-h-screen bg-muted/40 p-8">
       <div className="max-w-7xl mx-auto space-y-8">
+        {/* Bannière de succès du paiement */}
+        {isPaymentSuccess && (
+          <Alert variant="success" className="border-green-500">
+            <CheckCircle2 className="h-4 w-4" />
+            <AlertTitle>Paiement reçu !</AlertTitle>
+            <AlertDescription>
+              Activation de votre compte en cours... Votre abonnement Pro sera actif dans quelques instants.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* En-tête */}
         <div className="flex items-center justify-between">
           <Logo size="md" href={`/${locale}/dashboard`} />

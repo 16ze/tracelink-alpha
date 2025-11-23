@@ -67,11 +67,12 @@ export async function getUserBrand(): Promise<DatabaseBrand | null> {
 
   try {
     // Récupération de la marque de l'utilisateur
+    // Utilisation de no-store pour forcer le rafraîchissement des données
     const { data, error } = await supabase
       .from("brands")
       .select("*")
       .eq("owner_id", user.id)
-      .single();
+      .maybeSingle();
 
     if (error) {
       // Si aucune marque n'est trouvée (PGRST116 = not found), retourner null
@@ -79,6 +80,11 @@ export async function getUserBrand(): Promise<DatabaseBrand | null> {
         return null;
       }
       console.error("Erreur lors de la récupération de la marque:", error);
+      return null;
+    }
+
+    // maybeSingle() peut retourner null si aucun résultat n'est trouvé
+    if (!data) {
       return null;
     }
 

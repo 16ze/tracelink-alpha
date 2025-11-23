@@ -43,7 +43,7 @@ function SubmitButton({
       type="submit"
       disabled={isPending}
       variant={variant || "default"}
-      className={`w-full ${className}`}
+      className={className}
       size="lg"
     >
       {isPending ? (
@@ -75,8 +75,6 @@ export function ProButton({
   variant = "default",
   className = "",
 }: ProButtonProps) {
-  // Force la variante default si non spécifiée (pour la carte Pro)
-  const buttonVariant = variant || "default";
   // Wrapper pour passer la locale à l'action
   const checkoutWithLocale = async (
     prevState: CheckoutActionState | null,
@@ -108,7 +106,7 @@ export function ProButton({
       <input type="hidden" name="locale" value={locale} />
       <SubmitButton
         label={label}
-        variant={buttonVariant}
+        variant={variant}
         className={className}
         isPending={isPending}
       />
