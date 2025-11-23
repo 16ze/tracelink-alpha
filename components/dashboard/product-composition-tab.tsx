@@ -198,7 +198,7 @@ export function ProductCompositionTab({
                       component={component}
                       formattedDate={formattedDate}
                       IconComponent={IconComponent}
-                      hasCertificate={hasCertificate}
+                      hasCertificate={!!hasCertificate}
                       certificate={certificate}
                     />
                   );

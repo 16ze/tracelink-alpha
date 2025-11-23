@@ -32,7 +32,7 @@ export function isStripeConfigured(): boolean {
  */
 export const stripe = isStripeConfigured()
   ? new Stripe(stripeSecretKey!, {
-      apiVersion: "2024-12-18.acacia",
+      apiVersion: "2025-11-17.clover",
     })
   : (null as unknown as Stripe); // Type assertion pour éviter les erreurs TypeScript
 

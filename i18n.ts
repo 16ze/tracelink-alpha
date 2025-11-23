@@ -20,19 +20,17 @@ export const routing = {
  * Utilise getRequestConfig pour la configuration request-scope
  */
 export default getRequestConfig(async ({ requestLocale }) => {
-  // Utiliser requestLocale() pour récupérer la locale depuis le contexte de la requête
-  // requestLocale est une fonction qu'il faut appeler et attendre
-  let locale: string;
+  // Utiliser requestLocale pour récupérer la locale depuis le contexte de la requête
+  // requestLocale est une Promise qu'il faut attendre
+  let locale: string = defaultLocale;
   
   try {
-    locale = await requestLocale();
+    const requestedLocale = await requestLocale;
+    if (requestedLocale && locales.includes(requestedLocale as Locale)) {
+      locale = requestedLocale;
+    }
   } catch {
-    // Si requestLocale() échoue, utiliser la locale par défaut
-    locale = defaultLocale;
-  }
-  
-  // Si aucune locale n'est fournie ou si elle est invalide, utiliser la locale par défaut
-  if (!locale || !locales.includes(locale as Locale)) {
+    // Si requestLocale échoue, utiliser la locale par défaut
     locale = defaultLocale;
   }
   

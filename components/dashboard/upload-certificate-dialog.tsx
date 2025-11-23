@@ -56,12 +56,18 @@ interface UploadCertificateDialogProps {
 /**
  * Composant pour le bouton de soumission avec état de chargement
  */
-function SubmitButton({ children }: { children: React.ReactNode }) {
+function SubmitButton({ 
+  children, 
+  disabled 
+}: { 
+  children: React.ReactNode;
+  disabled?: boolean;
+}) {
   const { pending } = useFormStatus();
   return (
     <Button
       type="submit"
-      disabled={pending}
+      disabled={pending || disabled}
       className="bg-white hover:bg-white/90 text-foreground border border-border disabled:opacity-50 disabled:cursor-not-allowed"
     >
       {pending ? "Upload en cours..." : children}

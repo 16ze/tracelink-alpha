@@ -106,7 +106,7 @@ export function CreateBrandForm() {
               minLength={2}
               maxLength={255}
               autoComplete="organization"
-              disabled={state?.success === true}
+              disabled={!!state?.success}
             />
             <p className="text-xs text-muted-foreground">
               Minimum 2 caractères, maximum 255 caractères
@@ -122,7 +122,7 @@ export function CreateBrandForm() {
               type="url"
               placeholder="https://www.mamarque.com"
               autoComplete="url"
-              disabled={state?.success === true}
+              disabled={!!state?.success}
             />
             <p className="text-xs text-muted-foreground">
               Commencez par http:// ou https://

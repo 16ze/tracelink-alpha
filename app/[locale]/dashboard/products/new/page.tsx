@@ -136,7 +136,7 @@ export default function NewProductPage({
                   required
                   maxLength={255}
                   autoComplete="off"
-                  disabled={state?.success === true}
+                  disabled={!!state?.success}
                 />
                 <p className="text-xs text-muted-foreground">
                   Maximum 255 caractères
@@ -156,7 +156,7 @@ export default function NewProductPage({
                   required
                   maxLength={100}
                   autoComplete="off"
-                  disabled={state?.success === true}
+                  disabled={!!state?.success}
                 />
                 <p className="text-xs text-muted-foreground">
                   Code unique identifiant le produit (maximum 100 caractères)
@@ -172,7 +172,7 @@ export default function NewProductPage({
                   placeholder="Décrivez votre produit en quelques mots..."
                   rows={4}
                   className="resize-none"
-                  disabled={state?.success === true}
+                  disabled={!!state?.success}
                 />
                 <p className="text-xs text-muted-foreground">
                   Description optionnelle du produit
@@ -191,7 +191,7 @@ export default function NewProductPage({
                     type="file"
                     accept="image/jpeg,image/jpg,image/png,image/webp"
                     required
-                    disabled={state?.success === true}
+                    disabled={!!state?.success}
                     className="cursor-pointer"
                   />
                   <Upload className="h-4 w-4 text-muted-foreground" />

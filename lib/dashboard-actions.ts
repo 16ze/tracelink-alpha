@@ -156,7 +156,7 @@ export async function createBrand(
         name: name.trim(),
         website_url: websiteUrlValidated,
         owner_id: user.id,
-      })
+      } as any)
       .select()
       .single();
 
@@ -356,7 +356,7 @@ export async function createProduct(
         description: description?.trim() || null,
         photo_url: publicUrl,
         brand_id: brand.id,
-      })
+      } as any)
       .select()
       .single();
 
@@ -559,7 +559,7 @@ export async function addComponent(
         product_id: productId,
         type: type.trim(),
         origin_country: originCountry.trim(),
-      })
+      } as any)
       .select()
       .single();
 
@@ -703,7 +703,7 @@ export async function uploadCertificate(
     };
   }
 
-  const productId = componentData.product_id;
+  const productId = (componentData as any).product_id;
 
   // Vérification que le produit appartient à l'utilisateur
   const product = await getProductById(productId);
@@ -754,7 +754,7 @@ export async function uploadCertificate(
         type: certificateType.trim(),
         file_url: publicUrl,
         verified: false, // Par défaut, non vérifié
-      })
+      } as any)
       .select()
       .single();
 

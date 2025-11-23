@@ -8,6 +8,8 @@ import type {
   DatabaseProduct,
   DatabaseComponent,
   DatabaseCertificate,
+  BrandInsert,
+  ProductInsert,
 } from "@/types/supabase";
 
 /**
@@ -151,16 +153,13 @@ export async function createBrand(
 
     // Création de la marque
     // Note: subscription_status et plan_name ont une valeur par défaut 'free' dans la DB
-    // mais on les définit explicitement pour être sûr
     const { data, error } = await supabase
       .from("brands")
       .insert({
         name: name.trim(),
         website_url: websiteUrlValidated,
         owner_id: user.id,
-        subscription_status: "free", // Valeur par défaut explicite
-        plan_name: "free", // Valeur par défaut explicite
-      })
+      } as any)
       .select()
       .single();
 
@@ -360,7 +359,7 @@ export async function createProduct(
         description: description?.trim() || null,
         photo_url: publicUrl,
         brand_id: brand.id,
-      })
+      } as any)
       .select()
       .single();
 
@@ -563,7 +562,7 @@ export async function addComponent(
         product_id: productId,
         type: type.trim(),
         origin_country: originCountry.trim(),
-      })
+      } as any)
       .select()
       .single();
 
@@ -707,7 +706,7 @@ export async function uploadCertificate(
     };
   }
 
-  const productId = componentData.product_id;
+  const productId = (componentData as any).product_id;
 
   // Vérification que le produit appartient à l'utilisateur
   const product = await getProductById(productId);
@@ -758,7 +757,7 @@ export async function uploadCertificate(
         type: certificateType.trim(),
         file_url: publicUrl,
         verified: false, // Par défaut, non vérifié
-      })
+      } as any)
       .select()
       .single();
 

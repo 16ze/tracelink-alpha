@@ -36,6 +36,7 @@ export async function createCheckoutSession(locale: string): Promise<string | nu
   try {
     // Récupération de la marque de l'utilisateur
     // On sélectionne d'abord seulement l'id pour éviter l'erreur si la colonne n'existe pas
+    // @ts-ignore - Les types Supabase ne reconnaissent pas encore les colonnes Stripe
     const { data: brand, error: brandError } = await supabase
       .from("brands")
       .select("id")
@@ -46,17 +47,20 @@ export async function createCheckoutSession(locale: string): Promise<string | nu
       return null;
     }
 
+    const brandId = (brand as any).id;
+
     // Tentative de récupération du stripe_customer_id (si la colonne existe)
     let customerId: string | null = null;
     try {
+      // @ts-ignore - Les types Supabase ne reconnaissent pas encore les colonnes Stripe
       const { data: brandWithStripe, error: stripeError } = await supabase
         .from("brands")
         .select("stripe_customer_id")
-        .eq("id", brand.id)
+        .eq("id", brandId)
         .single();
       
       if (!stripeError && brandWithStripe) {
-        customerId = brandWithStripe.stripe_customer_id;
+        customerId = (brandWithStripe as any).stripe_customer_id;
       }
     } catch (err) {
       // Colonne n'existe pas encore - ignoré silencieusement
@@ -73,7 +77,7 @@ export async function createCheckoutSession(locale: string): Promise<string | nu
       const customer = await stripe.customers.create({
         email: user.email || undefined,
         metadata: {
-          brand_id: brand.id,
+          brand_id: brandId,
           user_id: user.id,
         },
       });
@@ -82,10 +86,9 @@ export async function createCheckoutSession(locale: string): Promise<string | nu
 
       // Mise à jour de la marque avec le customer_id (si la colonne existe)
       try {
-        await supabase
-          .from("brands")
-          .update({ stripe_customer_id: customerId })
-          .eq("id", brand.id);
+        // @ts-ignore - Les types Supabase ne reconnaissent pas encore les colonnes Stripe
+        const updateQuery = supabase.from("brands") as any;
+        await updateQuery.update({ stripe_customer_id: customerId }).eq("id", brandId);
       } catch (err) {
         // Colonne n'existe pas encore - ignoré silencieusement
       }
@@ -105,7 +108,7 @@ export async function createCheckoutSession(locale: string): Promise<string | nu
       success_url: `${stripeConfig.appUrl}/${locale}${stripeConfig.successUrl.replace(stripeConfig.appUrl, "")}`,
       cancel_url: `${stripeConfig.appUrl}/${locale}${stripeConfig.cancelUrl.replace(stripeConfig.appUrl, "")}`,
       metadata: {
-        brand_id: brand.id,
+        brand_id: brandId,
         user_id: user.id,
       },
       locale: locale === "en" ? "en" : "fr",

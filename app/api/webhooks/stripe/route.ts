@@ -4,36 +4,50 @@ import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 
 // 1. Initialisation de Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2024-10-28.acacia", // ou la version par défaut
-  typescript: true,
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+if (!stripeSecretKey) {
+  throw new Error("STRIPE_SECRET_KEY is not defined");
+}
+
+const stripe = new Stripe(stripeSecretKey, {
+  apiVersion: "2025-11-17.clover",
 });
 
 // 2. Configuration Supabase Admin (Service Role)
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  }
-);
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !supabaseServiceRoleKey) {
+  throw new Error("Supabase environment variables are not defined");
+}
+
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+  },
+});
 
 // 3. Secret du Webhook
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+if (!webhookSecret) {
+  throw new Error("STRIPE_WEBHOOK_SECRET is not defined");
+}
 
 export async function POST(req: Request) {
   try {
     const body = await req.text();
-    const signature = (await headers()).get("stripe-signature") as string;
+    const signature = (await headers()).get("stripe-signature");
+    
+    if (!signature) {
+      return new NextResponse("Missing stripe-signature header", { status: 400 });
+    }
 
     let event: Stripe.Event;
 
     // Vérification de la signature Stripe
     try {
-      event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+      event = stripe.webhooks.constructEvent(body, signature, webhookSecret!);
     } catch (err: any) {
       console.error(`❌ Erreur signature Webhook: ${err.message}`);
       return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 });
