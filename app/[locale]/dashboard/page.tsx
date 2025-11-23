@@ -16,6 +16,8 @@ import { getUserBrand, getUserProducts } from "./actions";
 import { CreateBrandForm } from "@/components/dashboard/create-brand-form";
 import { ProductTableRow } from "@/components/dashboard/product-table-row";
 import { Logo } from "@/components/logo";
+import { ProButton } from "@/components/landing/pro-button";
+import { isStripeConfigured } from "@/utils/stripe/config";
 
 /**
  * Action serveur pour la déconnexion
@@ -62,19 +64,31 @@ export default async function DashboardPage({
   // Récupération des produits de l'utilisateur (si marque existe)
   const products = brand ? await getUserProducts() : [];
 
+  // Vérification du statut d'abonnement et de la configuration Stripe
+  const stripeConfigured = isStripeConfigured();
+  const isFreePlan = brand
+    ? brand.subscription_status !== "active"
+    : false; // Si pas de marque, on considère comme gratuit
+
   return (
     <main className="min-h-screen bg-muted/40 p-8">
       <div className="max-w-7xl mx-auto space-y-8">
         {/* En-tête */}
         <div className="flex items-center justify-between">
           <Logo size="md" href={`/${locale}/dashboard`} />
-          <form action={logoutAction}>
-            <input type="hidden" name="locale" value={locale} />
-            <Button type="submit" variant="outline" className="gap-2">
-              <LogOut className="h-4 w-4" />
-              Déconnexion
-            </Button>
-          </form>
+          <div className="flex items-center gap-3">
+            {/* Bouton Pro (affiché uniquement si Stripe est configuré et utilisateur en mode gratuit) */}
+            {stripeConfigured && isFreePlan && brand && (
+              <ProButton locale={locale} label="Passer Pro" />
+            )}
+            <form action={logoutAction}>
+              <input type="hidden" name="locale" value={locale} />
+              <Button type="submit" variant="outline" className="gap-2">
+                <LogOut className="h-4 w-4" />
+                Déconnexion
+              </Button>
+            </form>
+          </div>
         </div>
 
         {/* Contenu principal */}
@@ -96,12 +110,18 @@ export default async function DashboardPage({
                   Gérez vos produits et créez vos passeports numériques
                 </p>
               </div>
-              <Link href={`/${locale}/dashboard/products/new`}>
-                <Button className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  Nouveau Produit
-                </Button>
-              </Link>
+              <div className="flex items-center gap-3">
+                {/* Bouton Pro (affiché uniquement si Stripe est configuré et utilisateur en mode gratuit) */}
+                {stripeConfigured && isFreePlan && (
+                  <ProButton locale={locale} label="Passer Pro" variant="outline" />
+                )}
+                <Link href={`/${locale}/dashboard/products/new`}>
+                  <Button className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    Nouveau Produit
+                  </Button>
+                </Link>
+              </div>
             </div>
 
             {/* Liste des produits */}

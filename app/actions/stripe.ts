@@ -1,172 +1,113 @@
 "use server";
 
+import { stripe, stripeConfig, isStripeConfigured } from "@/utils/stripe/config";
 import { createClient } from "@/utils/supabase/server";
-import { stripe, stripeConfig } from "@/utils/stripe/config";
 import { redirect } from "next/navigation";
 
 /**
- * Server Action pour créer une session Stripe Checkout
- *
- * Cette action :
- * 1. Vérifie que l'utilisateur est connecté
- * 2. Récupère la marque (brand) de l'utilisateur
- * 3. Crée une session Stripe Checkout en mode subscription
- * 4. Redirige l'utilisateur vers la page de paiement Stripe
- *
- * @param priceId - L'ID du prix Stripe pour le plan d'abonnement
- * @param locale - La locale actuelle (pour la redirection en cas d'annulation)
- * @returns Redirige vers Stripe Checkout ou retourne une erreur
+ * Action serveur pour créer une session de checkout Stripe pour le plan Pro
+ * 
+ * @param locale - La locale de l'application (pour les redirections)
+ * @returns L'URL de redirection vers Stripe Checkout ou null en cas d'erreur
  */
-export async function createCheckoutSession(
-  priceId: string,
-  locale: string = "fr"
-) {
+export async function createCheckoutSession(locale: string): Promise<string | null> {
+  // Vérification de la configuration Stripe
+  if (!isStripeConfigured()) {
+    console.error("Stripe n'est pas correctement configuré");
+    return null;
+  }
+
+  // Récupération de l'utilisateur connecté
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    console.error("Erreur lors de la récupération de l'utilisateur:", userError);
+    return null;
+  }
+
   try {
-    console.log("🚀 Action Stripe lancée, PriceID:", priceId);
-    
-    // Vérification de la clé Stripe avec plus de détails
-    const stripeKey = process.env.STRIPE_SECRET_KEY;
-    if (!stripeKey) {
-      console.error("❌ ERREUR: STRIPE_SECRET_KEY est MANQUANTE");
-      return {
-        error: "Configuration Stripe manquante. Veuillez contacter le support.",
-      };
-    }
-    
-    // Vérification que c'est bien une clé secrète
-    if (stripeKey.startsWith("pk_")) {
-      console.error("❌ ERREUR: STRIPE_SECRET_KEY contient une clé PUBLIQUE (pk_) au lieu d'une clé SECRÈTE (sk_)");
-      return {
-        error: "Configuration Stripe incorrecte : une clé publique a été utilisée au lieu d'une clé secrète. Veuillez vérifier votre fichier .env.local",
-      };
-    }
-    
-    if (!stripeKey.startsWith("sk_")) {
-      console.error("❌ ERREUR: STRIPE_SECRET_KEY ne semble pas être une clé secrète valide");
-      return {
-        error: "Configuration Stripe incorrecte : la clé secrète n'est pas valide. Veuillez vérifier votre fichier .env.local",
-      };
-    }
-    
-    // Masquer la clé dans les logs (afficher seulement les 7 premiers et 4 derniers caractères)
-    const maskedKey = stripeKey.substring(0, 7) + "..." + stripeKey.substring(stripeKey.length - 4);
-    console.log("🔑 Clé Stripe:", `Présente (${maskedKey})`);
-
-    // Création du client Supabase pour accéder à la base de données
-    const supabase = await createClient();
-
-    // Vérification que l'utilisateur est connecté
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    console.log("👤 User:", user?.id || "NON CONNECTÉ");
-    if (authError) {
-      console.error("❌ ERREUR AUTH:", authError);
-    }
-
-    if (authError || !user) {
-      // Si l'utilisateur n'est pas connecté, rediriger vers la page de connexion
-      console.log("🔄 Redirection vers login (utilisateur non connecté)");
-      redirect(`/${locale}/login?redirect=pricing`);
-    }
-
-    // Récupération de la marque (brand) associée à l'utilisateur
-    console.log("🔍 Récupération de la marque pour l'utilisateur:", user.id);
+    // Récupération de la marque de l'utilisateur
     const { data: brand, error: brandError } = await supabase
       .from("brands")
-      .select("id")
+      .select("id, stripe_customer_id")
       .eq("owner_id", user.id)
       .single();
 
-    if (brandError) {
-      console.error("❌ ERREUR STRIPE - Erreur lors de la récupération de la marque:", brandError);
-    }
-
     if (brandError || !brand) {
-      // Si l'utilisateur n'a pas de marque, rediriger vers le dashboard pour en créer une
-      console.error("❌ ERREUR STRIPE - Pas de marque, redirection vers dashboard");
-      if (brandError) {
-        console.error("Détails de l'erreur:", brandError);
-      }
-      redirect(`/${locale}/dashboard?error=no_brand`);
+      console.error("Erreur lors de la récupération de la marque:", brandError);
+      return null;
     }
 
-    console.log("✅ Marque trouvée:", brand.id);
+    // Création ou récupération du client Stripe
+    let customerId = brand.stripe_customer_id;
 
-    // Construction des URLs de redirection avec l'URL dynamique
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const successUrl = `${appUrl}/${locale}/dashboard?success=true`;
-    const cancelUrl = `${appUrl}/${locale}?canceled=true`;
+    if (!customerId) {
+      // Création d'un nouveau client Stripe
+      const customer = await stripe.customers.create({
+        email: user.email || undefined,
+        metadata: {
+          brand_id: brand.id,
+          user_id: user.id,
+        },
+      });
 
-    console.log("🔗 URLs de redirection:", { successUrl, cancelUrl });
+      customerId = customer.id;
 
-    // Création de la session Stripe Checkout
-    console.log("💳 Création de la session Stripe Checkout...");
+      // Mise à jour de la marque avec le customer_id
+      await supabase
+        .from("brands")
+        .update({ stripe_customer_id: customerId })
+        .eq("id", brand.id);
+    }
+
+    // Création de la session de checkout
     const session = await stripe.checkout.sessions.create({
-      mode: "subscription", // Mode abonnement récurrent
-      payment_method_types: ["card"], // Types de paiement acceptés
+      customer: customerId,
+      mode: "subscription",
+      payment_method_types: ["card"],
       line_items: [
         {
-          price: priceId, // ID du prix Stripe passé en paramètre
-          quantity: 1, // Quantité d'abonnements
+          price: stripeConfig.proPriceId,
+          quantity: 1,
         },
       ],
-      success_url: successUrl, // URL de redirection après succès
-      cancel_url: cancelUrl, // URL de redirection en cas d'annulation
+      success_url: `${stripeConfig.appUrl}/${locale}${stripeConfig.successUrl.replace(stripeConfig.appUrl, "")}`,
+      cancel_url: `${stripeConfig.appUrl}/${locale}${stripeConfig.cancelUrl.replace(stripeConfig.appUrl, "")}`,
       metadata: {
-        // Métadonnées stockées avec la session pour les retrouver plus tard
-        brand_id: brand.id, // ID de la marque
-        user_id: user.id, // ID de l'utilisateur
+        brand_id: brand.id,
+        user_id: user.id,
       },
-      // Permet de préremplir l'email dans le formulaire Stripe
-      customer_email: user.email || undefined,
+      locale: locale === "en" ? "en" : "fr",
     });
 
-    console.log("✅ Session Stripe créée:", session.id);
-
-    // Redirection vers la page de paiement Stripe
-    if (session.url) {
-      console.log("🔄 Redirection vers:", session.url);
-      redirect(session.url);
-    }
-
-    console.error("❌ ERREUR STRIPE - Pas d'URL de session");
-    return {
-      error: "Impossible de créer la session de paiement",
-    };
+    return session.url;
   } catch (error) {
-    // Les redirections Next.js lancent une exception spéciale
-    // On doit la laisser remonter pour que Next.js la gère
-    if (
-      error &&
-      typeof error === "object" &&
-      ("digest" in error || "message" in error)
-    ) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      if (
-        errorMessage.includes("NEXT_REDIRECT") ||
-        (error as any).digest?.includes("NEXT_REDIRECT")
-      ) {
-        // C'est une redirection Next.js, on la laisse remonter
-        throw error;
-      }
-    }
-    
-    // Sinon, c'est une vraie erreur qu'on doit gérer
-    console.error("❌ ERREUR STRIPE:", error);
-    if (error instanceof Error) {
-      console.error("❌ Message d'erreur:", error.message);
-      console.error("❌ Stack trace:", error.stack);
-    }
-    return {
-      error:
-        error instanceof Error
-          ? error.message
-          : "Une erreur est survenue lors de la création de la session de paiement",
-    };
+    console.error("Erreur lors de la création de la session de checkout:", error);
+    return null;
   }
 }
 
+/**
+ * Action serveur pour rediriger vers Stripe Checkout
+ * 
+ * Cette fonction est utilisée par le composant ProButton pour déclencher le checkout.
+ * 
+ * @param formData - Contient la locale
+ */
+export async function redirectToCheckout(formData: FormData) {
+  "use server";
+  
+  const locale = (formData.get("locale") as string) || "fr";
+  const checkoutUrl = await createCheckoutSession(locale);
+
+  if (checkoutUrl) {
+    redirect(checkoutUrl);
+  } else {
+    // En cas d'erreur, rediriger vers le dashboard avec un message d'erreur
+    redirect(`/${locale}/dashboard?error=checkout_failed`);
+  }
+}
