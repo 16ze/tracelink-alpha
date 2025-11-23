@@ -94,6 +94,18 @@ export async function createCheckoutSession(locale: string): Promise<string | nu
       }
     }
 
+    // Construction des URLs de redirection avec fallback de sécurité
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    
+    if (!appUrl) {
+      console.error("❌ ERREUR CRITIQUE: NEXT_PUBLIC_APP_URL n'est pas définie. Impossible de créer la session de checkout.");
+      return null;
+    }
+
+    // Construction des URLs avec la locale
+    const successUrl = `${appUrl}/${locale}/dashboard?checkout=success`;
+    const cancelUrl = `${appUrl}/${locale}/dashboard?checkout=canceled`;
+
     // Création de la session de checkout
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -105,8 +117,8 @@ export async function createCheckoutSession(locale: string): Promise<string | nu
           quantity: 1,
         },
       ],
-      success_url: `${stripeConfig.appUrl}/${locale}${stripeConfig.successUrl.replace(stripeConfig.appUrl, "")}`,
-      cancel_url: `${stripeConfig.appUrl}/${locale}${stripeConfig.cancelUrl.replace(stripeConfig.appUrl, "")}`,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
       metadata: {
         brand_id: brandId,
         user_id: user.id,
