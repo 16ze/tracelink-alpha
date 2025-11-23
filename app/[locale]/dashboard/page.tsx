@@ -144,24 +144,51 @@ export default async function DashboardPage({
                 <CardHeader>
                   <CardTitle className="text-sm">🐛 Debug Info</CardTitle>
                 </CardHeader>
-                <CardContent className="text-xs space-y-1">
-                  <p>
-                    <strong>Stripe configuré:</strong> {stripeConfigured ? "✅ Oui" : "❌ Non"}
-                  </p>
-                  <p>
-                    <strong>Statut abonnement:</strong> {brand.subscription_status || "null"}
-                  </p>
-                  <p>
-                    <strong>Plan gratuit:</strong> {isFreePlan ? "✅ Oui" : "❌ Non"}
-                  </p>
-                  <p>
-                    <strong>Bouton visible:</strong>{" "}
-                    {stripeConfigured && isFreePlan ? "✅ Oui" : "❌ Non"}
-                  </p>
-                  {!stripeConfigured && (
-                    <p className="text-red-600 font-semibold mt-2">
-                      ⚠️ Vérifiez vos variables d'environnement: STRIPE_SECRET_KEY, STRIPE_PRO_PRICE_ID, NEXT_PUBLIC_APP_URL
+                <CardContent className="text-xs space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <p>
+                      <strong>Stripe configuré:</strong> {stripeConfigured ? "✅ Oui" : "❌ Non"}
                     </p>
+                    <p>
+                      <strong>Statut abonnement:</strong> {brand.subscription_status || "null"}
+                    </p>
+                    <p>
+                      <strong>Plan gratuit:</strong> {isFreePlan ? "✅ Oui" : "❌ Non"}
+                    </p>
+                    <p>
+                      <strong>Bouton visible:</strong>{" "}
+                      {stripeConfigured && isFreePlan ? "✅ Oui" : "❌ Non"}
+                    </p>
+                  </div>
+                  {!stripeConfigured && (
+                    <div className="mt-3 p-2 bg-red-100 dark:bg-red-900/20 rounded border border-red-300">
+                      <p className="text-red-700 dark:text-red-400 font-semibold mb-2">
+                        ⚠️ Variables d'environnement manquantes ou invalides:
+                      </p>
+                      <ul className="list-disc list-inside space-y-1 text-red-600 dark:text-red-300">
+                        <li>
+                          STRIPE_SECRET_KEY:{" "}
+                          {process.env.STRIPE_SECRET_KEY
+                            ? `✅ Présente (${process.env.STRIPE_SECRET_KEY.substring(0, 7)}...)`
+                            : "❌ Manquante"}
+                        </li>
+                        <li>
+                          STRIPE_PRO_PRICE_ID:{" "}
+                          {process.env.STRIPE_PRO_PRICE_ID
+                            ? `✅ Présente (${process.env.STRIPE_PRO_PRICE_ID.substring(0, 7)}...)`
+                            : "❌ Manquante"}
+                        </li>
+                        <li>
+                          NEXT_PUBLIC_APP_URL:{" "}
+                          {process.env.NEXT_PUBLIC_APP_URL
+                            ? `✅ Présente (${process.env.NEXT_PUBLIC_APP_URL})`
+                            : "❌ Manquante"}
+                        </li>
+                      </ul>
+                      <p className="text-red-600 dark:text-red-400 text-xs mt-2">
+                        💡 Astuce: Redémarrez le serveur Next.js après avoir modifié .env.local
+                      </p>
+                    </div>
                   )}
                 </CardContent>
               </Card>
