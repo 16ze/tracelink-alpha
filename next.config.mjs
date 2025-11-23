@@ -8,7 +8,7 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "**", // Autorise toutes les images (Supabase, etc)
+        hostname: "**",
       },
     ],
   },
