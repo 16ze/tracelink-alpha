@@ -31,3 +31,5 @@ COMMENT ON COLUMN brands.stripe_subscription_id IS 'Identifiant unique de l''abo
 COMMENT ON COLUMN brands.plan_name IS 'Nom du plan d''abonnement: free, pro, enterprise';
 
 
+
+

@@ -95,7 +95,9 @@ export function ProButton({
     if (state?.checkoutUrl) {
       window.location.href = state.checkoutUrl;
     } else if (state?.error) {
-      alert(`Erreur lors de la création de la session de checkout:\n\n${state.error}`);
+      alert(
+        `Erreur lors de la création de la session de checkout:\n\n${state.error}`
+      );
     }
   }, [state]);
 
