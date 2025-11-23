@@ -1,9 +1,11 @@
 "use client";
 
-import { redirectToCheckout, type CheckoutActionState } from "@/app/actions/stripe";
+import {
+  redirectToCheckout,
+  type CheckoutActionState,
+} from "@/app/actions/stripe";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
-import { useFormStatus } from "react-dom";
 import { useActionState, useEffect } from "react";
 
 /**
@@ -84,10 +86,10 @@ export function ProButton({
   };
 
   // Utilisation de useActionState pour gérer l'état de l'action
-  const [state, formAction, isPending] = useActionState<CheckoutActionState | null, FormData>(
-    checkoutWithLocale,
-    null
-  );
+  const [state, formAction, isPending] = useActionState<
+    CheckoutActionState | null,
+    FormData
+  >(checkoutWithLocale, null);
 
   // Gestion de la redirection côté client quand l'URL est disponible
   useEffect(() => {
@@ -96,16 +98,18 @@ export function ProButton({
       window.location.href = state.checkoutUrl;
     } else if (state?.error) {
       console.error("❌ [ProButton CLIENT] Erreur:", state.error);
+      // Afficher une alerte pour informer l'utilisateur
+      alert(`Erreur lors de la création de la session de checkout:\n\n${state.error}\n\nVérifiez les logs du serveur pour plus de détails.`);
     }
   }, [state]);
 
   return (
     <form action={formAction}>
       <input type="hidden" name="locale" value={locale} />
-      <SubmitButton 
-        label={label} 
-        variant={variant} 
-        className={className} 
+      <SubmitButton
+        label={label}
+        variant={variant}
+        className={className}
         isPending={isPending}
       />
     </form>

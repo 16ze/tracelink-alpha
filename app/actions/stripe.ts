@@ -64,6 +64,12 @@ export async function createCheckoutSession(locale: string): Promise<string | nu
     let customerId = brand.stripe_customer_id;
     console.log("[createCheckoutSession] Customer ID existant:", customerId || "Aucun");
 
+    // Vérification que l'instance Stripe est disponible
+    if (!stripe) {
+      console.error("❌ [createCheckoutSession] Instance Stripe non disponible (null)");
+      return null;
+    }
+
     if (!customerId) {
       console.log("[createCheckoutSession] Création d'un nouveau client Stripe...");
       // Création d'un nouveau client Stripe
@@ -154,14 +160,23 @@ export async function redirectToCheckout(
   const locale = (formData.get("locale") as string) || "fr";
   console.log("🔍 [redirectToCheckout] Locale extraite:", locale);
   
-  const checkoutUrl = await createCheckoutSession(locale);
-  console.log("🔍 [redirectToCheckout] URL de checkout reçue:", checkoutUrl ? "✅ Présente" : "❌ Null/Undefined");
+  try {
+    const checkoutUrl = await createCheckoutSession(locale);
+    console.log("🔍 [redirectToCheckout] URL de checkout reçue:", checkoutUrl ? "✅ Présente" : "❌ Null/Undefined");
 
-  if (checkoutUrl) {
-    console.log("🔍 [redirectToCheckout] Retour de l'URL de checkout");
-    return { checkoutUrl };
-  } else {
-    console.error("❌ [redirectToCheckout] Échec - retour d'erreur");
-    return { error: "Impossible de créer la session de checkout. Veuillez réessayer." };
+    if (checkoutUrl) {
+      console.log("🔍 [redirectToCheckout] Retour de l'URL de checkout");
+      return { checkoutUrl };
+    } else {
+      console.error("❌ [redirectToCheckout] Échec - createCheckoutSession a retourné null");
+      return { error: "Impossible de créer la session de checkout. Vérifiez les logs serveur pour plus de détails." };
+    }
+  } catch (error) {
+    console.error("❌ [redirectToCheckout] Exception capturée:", error);
+    if (error instanceof Error) {
+      console.error("❌ [redirectToCheckout] Message d'erreur:", error.message);
+      console.error("❌ [redirectToCheckout] Stack:", error.stack);
+    }
+    return { error: `Erreur lors de la création de la session: ${error instanceof Error ? error.message : "Erreur inconnue"}` };
   }
 }
