@@ -27,7 +27,9 @@ export async function createCheckoutSession(locale: string): Promise<string | nu
     return null;
   }
 
-  // Récupération de l'utilisateur connecté
+  // ============================================
+  // 1. VÉRIFICATION AUTHENTIFICATION (HORS try/catch)
+  // ============================================
   const supabase = await createClient();
   const {
     data: { user },
@@ -40,23 +42,27 @@ export async function createCheckoutSession(locale: string): Promise<string | nu
     redirect(`/${locale}/login`);
   }
 
+  // Récupération de la marque de l'utilisateur
+  // On sélectionne d'abord seulement l'id pour éviter l'erreur si la colonne n'existe pas
+  // @ts-ignore - Les types Supabase ne reconnaissent pas encore les colonnes Stripe
+  const { data: brand, error: brandError } = await supabase
+    .from("brands")
+    .select("id")
+    .eq("owner_id", user.id)
+    .maybeSingle();
+
+  // Gestion du cas où l'utilisateur n'a pas de marque : redirection vers dashboard
+  if (brandError || !brand) {
+    console.log("🏢 Utilisateur connecté mais pas de marque, redirection vers /dashboard");
+    redirect(`/${locale}/dashboard`);
+  }
+
+  const brandId = (brand as any).id;
+
+  // ============================================
+  // 2. LOGIQUE STRIPE (DANS le try/catch)
+  // ============================================
   try {
-    // Récupération de la marque de l'utilisateur
-    // On sélectionne d'abord seulement l'id pour éviter l'erreur si la colonne n'existe pas
-    // @ts-ignore - Les types Supabase ne reconnaissent pas encore les colonnes Stripe
-    const { data: brand, error: brandError } = await supabase
-      .from("brands")
-      .select("id")
-      .eq("owner_id", user.id)
-      .maybeSingle();
-
-    // Gestion du cas où l'utilisateur n'a pas de marque : redirection vers dashboard
-    if (brandError || !brand) {
-      console.log("🏢 Utilisateur connecté mais pas de marque, redirection vers /dashboard");
-      redirect(`/${locale}/dashboard`);
-    }
-
-    const brandId = (brand as any).id;
 
     // Tentative de récupération du stripe_customer_id (si la colonne existe)
     let customerId: string | null = null;
@@ -144,8 +150,8 @@ export async function createCheckoutSession(locale: string): Promise<string | nu
       console.error("Message:", error.message);
       console.error("Stack:", error.stack);
     }
-    // Si c'est une erreur de redirection Next.js, on la propage
-    if (error && typeof error === 'object' && 'digest' in error) {
+    // Si c'est une erreur de redirection Next.js, on la propage (ne devrait pas arriver ici)
+    if (error && typeof error === 'object' && 'digest' in error && (error as any).digest?.startsWith('NEXT_REDIRECT')) {
       throw error;
     }
     return null;
