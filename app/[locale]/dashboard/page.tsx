@@ -66,9 +66,23 @@ export default async function DashboardPage({
 
   // Vérification du statut d'abonnement et de la configuration Stripe
   const stripeConfigured = isStripeConfigured();
+  // Un utilisateur est en mode gratuit si :
+  // - Il n'a pas de marque, OU
+  // - Sa marque a un statut différent de "active" (null, "free", "canceled", etc.)
   const isFreePlan = brand
-    ? brand.subscription_status !== "active"
+    ? brand.subscription_status === null || brand.subscription_status !== "active"
     : false; // Si pas de marque, on considère comme gratuit
+
+  // Logs de débogage (à retirer en production)
+  if (process.env.NODE_ENV === "development") {
+    console.log("[Dashboard Debug]", {
+      stripeConfigured,
+      hasBrand: !!brand,
+      subscriptionStatus: brand?.subscription_status,
+      isFreePlan,
+      shouldShowButton: stripeConfigured && isFreePlan && brand,
+    });
+  }
 
   return (
     <main className="min-h-screen bg-muted/40 p-8">
@@ -123,6 +137,35 @@ export default async function DashboardPage({
                 </Link>
               </div>
             </div>
+
+            {/* Message de débogage (uniquement en développement) */}
+            {process.env.NODE_ENV === "development" && (
+              <Card className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950">
+                <CardHeader>
+                  <CardTitle className="text-sm">🐛 Debug Info</CardTitle>
+                </CardHeader>
+                <CardContent className="text-xs space-y-1">
+                  <p>
+                    <strong>Stripe configuré:</strong> {stripeConfigured ? "✅ Oui" : "❌ Non"}
+                  </p>
+                  <p>
+                    <strong>Statut abonnement:</strong> {brand.subscription_status || "null"}
+                  </p>
+                  <p>
+                    <strong>Plan gratuit:</strong> {isFreePlan ? "✅ Oui" : "❌ Non"}
+                  </p>
+                  <p>
+                    <strong>Bouton visible:</strong>{" "}
+                    {stripeConfigured && isFreePlan ? "✅ Oui" : "❌ Non"}
+                  </p>
+                  {!stripeConfigured && (
+                    <p className="text-red-600 font-semibold mt-2">
+                      ⚠️ Vérifiez vos variables d'environnement: STRIPE_SECRET_KEY, STRIPE_PRO_PRICE_ID, NEXT_PUBLIC_APP_URL
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Liste des produits */}
             {products.length === 0 ? (

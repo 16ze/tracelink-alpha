@@ -150,12 +150,16 @@ export async function createBrand(
     }
 
     // Création de la marque
+    // Note: subscription_status et plan_name ont une valeur par défaut 'free' dans la DB
+    // mais on les définit explicitement pour être sûr
     const { data, error } = await supabase
       .from("brands")
       .insert({
         name: name.trim(),
         website_url: websiteUrlValidated,
         owner_id: user.id,
+        subscription_status: "free", // Valeur par défaut explicite
+        plan_name: "free", // Valeur par défaut explicite
       })
       .select()
       .single();
