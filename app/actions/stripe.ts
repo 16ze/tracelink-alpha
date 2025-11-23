@@ -127,13 +127,27 @@ export async function createCheckoutSession(locale: string): Promise<string | nu
 }
 
 /**
- * Action serveur pour rediriger vers Stripe Checkout
- * 
- * Cette fonction est utilisée par le composant ProButton pour déclencher le checkout.
- * 
- * @param formData - Contient la locale
+ * Type de retour pour l'action de checkout
  */
-export async function redirectToCheckout(formData: FormData) {
+export type CheckoutActionState = {
+  error?: string;
+  checkoutUrl?: string;
+};
+
+/**
+ * Action serveur pour créer une session de checkout Stripe
+ * 
+ * Cette fonction retourne l'URL de checkout au lieu de rediriger directement.
+ * La redirection sera gérée côté client pour éviter les problèmes avec redirect().
+ * 
+ * @param prevState - État précédent (pour useActionState)
+ * @param formData - Contient la locale
+ * @returns État avec checkoutUrl ou error
+ */
+export async function redirectToCheckout(
+  prevState: CheckoutActionState | null,
+  formData: FormData
+): Promise<CheckoutActionState> {
   "use server";
   
   console.log("🔍 [redirectToCheckout] Début de la fonction");
@@ -144,11 +158,10 @@ export async function redirectToCheckout(formData: FormData) {
   console.log("🔍 [redirectToCheckout] URL de checkout reçue:", checkoutUrl ? "✅ Présente" : "❌ Null/Undefined");
 
   if (checkoutUrl) {
-    console.log("🔍 [redirectToCheckout] Redirection vers Stripe Checkout...");
-    redirect(checkoutUrl);
+    console.log("🔍 [redirectToCheckout] Retour de l'URL de checkout");
+    return { checkoutUrl };
   } else {
-    console.error("❌ [redirectToCheckout] Échec - redirection vers dashboard avec erreur");
-    // En cas d'erreur, rediriger vers le dashboard avec un message d'erreur
-    redirect(`/${locale}/dashboard?error=checkout_failed`);
+    console.error("❌ [redirectToCheckout] Échec - retour d'erreur");
+    return { error: "Impossible de créer la session de checkout. Veuillez réessayer." };
   }
 }
