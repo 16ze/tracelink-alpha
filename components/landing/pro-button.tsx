@@ -1,9 +1,10 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { redirectToCheckout } from "@/app/actions/stripe";
-import { useFormStatus } from "react-dom";
+import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { useFormStatus } from "react-dom";
+import { useRef } from "react";
 
 /**
  * Props du composant ProButton
@@ -11,7 +12,13 @@ import { Loader2 } from "lucide-react";
 interface ProButtonProps {
   locale: string;
   label?: string;
-  variant?: "default" | "outline" | "ghost" | "link" | "destructive" | "secondary";
+  variant?:
+    | "default"
+    | "outline"
+    | "ghost"
+    | "link"
+    | "destructive"
+    | "secondary";
   className?: string;
 }
 
@@ -52,10 +59,10 @@ function SubmitButton({
 
 /**
  * Composant bouton pour passer au plan Pro
- * 
+ *
  * Affiche un bouton qui redirige vers Stripe Checkout pour souscrire au plan Pro.
  * Utilise useFormStatus pour gérer correctement l'état pending de la Server Action.
- * 
+ *
  * @param locale - La locale de l'application
  * @param label - Le texte du bouton (par défaut: "Passer Pro")
  * @param variant - La variante du bouton (par défaut: "default")
@@ -68,7 +75,15 @@ export function ProButton({
   className = "",
 }: ProButtonProps) {
   return (
-    <form action={redirectToCheckout}>
+    <form 
+      action={redirectToCheckout}
+      onSubmit={(e) => {
+        console.log("🔍 [ProButton CLIENT] Formulaire soumis!");
+        console.log("🔍 [ProButton CLIENT] Locale:", locale);
+        const formData = new FormData(e.currentTarget);
+        console.log("🔍 [ProButton CLIENT] FormData locale:", formData.get("locale"));
+      }}
+    >
       <input type="hidden" name="locale" value={locale} />
       <SubmitButton label={label} variant={variant} className={className} />
     </form>
