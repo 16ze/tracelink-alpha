@@ -11,14 +11,19 @@ import { redirect } from "next/navigation";
  * @returns L'URL de redirection vers Stripe Checkout ou null en cas d'erreur
  */
 export async function createCheckoutSession(locale: string): Promise<string | null> {
+  // Logs de vérification des variables d'environnement
+  console.log('🔑 Checking Keys - Secret:', !!process.env.STRIPE_SECRET_KEY, 'PriceID:', !!process.env.STRIPE_PRO_PRICE_ID);
+  
   // Vérification de la configuration Stripe
   if (!isStripeConfigured()) {
+    console.error("❌ Stripe n'est pas correctement configuré");
     return null;
   }
 
   // Utilisation directe de la variable d'environnement côté serveur (sécurisé)
   const proPriceId = process.env.STRIPE_PRO_PRICE_ID;
   if (!proPriceId) {
+    console.error("❌ STRIPE_PRO_PRICE_ID n'est pas définie");
     return null;
   }
 
@@ -29,8 +34,10 @@ export async function createCheckoutSession(locale: string): Promise<string | nu
     error: userError,
   } = await supabase.auth.getUser();
 
+  // Gestion de l'authentification : redirection vers login si non connecté
   if (userError || !user) {
-    return null;
+    console.log("🔐 Utilisateur non connecté, redirection vers /login");
+    redirect(`/${locale}/login`);
   }
 
   try {
@@ -41,10 +48,12 @@ export async function createCheckoutSession(locale: string): Promise<string | nu
       .from("brands")
       .select("id")
       .eq("owner_id", user.id)
-      .single();
+      .maybeSingle();
 
+    // Gestion du cas où l'utilisateur n'a pas de marque : redirection vers dashboard
     if (brandError || !brand) {
-      return null;
+      console.log("🏢 Utilisateur connecté mais pas de marque, redirection vers /dashboard");
+      redirect(`/${locale}/dashboard`);
     }
 
     const brandId = (brand as any).id;
@@ -126,9 +135,19 @@ export async function createCheckoutSession(locale: string): Promise<string | nu
       locale: locale === "en" ? "en" : "fr",
     });
 
+    console.log("✅ Session de checkout créée avec succès:", session.id);
     return session.url;
   } catch (error) {
-    console.error("Erreur lors de la création de la session de checkout:", error);
+    // Logs détaillés pour identifier la vraie erreur
+    console.error("❌ STRIPE ERROR DETAILS:", error);
+    if (error instanceof Error) {
+      console.error("Message:", error.message);
+      console.error("Stack:", error.stack);
+    }
+    // Si c'est une erreur de redirection Next.js, on la propage
+    if (error && typeof error === 'object' && 'digest' in error) {
+      throw error;
+    }
     return null;
   }
 }
