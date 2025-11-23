@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { redirectToCheckout } from "@/app/actions/stripe";
-import { useState } from "react";
+import { useFormStatus } from "react-dom";
 import { Loader2 } from "lucide-react";
 
 /**
@@ -16,10 +16,45 @@ interface ProButtonProps {
 }
 
 /**
+ * Composant bouton interne qui utilise useFormStatus
+ * Doit être à l'intérieur d'un <form> pour fonctionner
+ */
+function SubmitButton({
+  label,
+  variant,
+  className,
+}: {
+  label: string;
+  variant: ProButtonProps["variant"];
+  className: string;
+}) {
+  const { pending } = useFormStatus();
+
+  return (
+    <Button
+      type="submit"
+      disabled={pending}
+      variant={variant}
+      className={className}
+      size="lg"
+    >
+      {pending ? (
+        <>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Redirection...
+        </>
+      ) : (
+        label
+      )}
+    </Button>
+  );
+}
+
+/**
  * Composant bouton pour passer au plan Pro
  * 
  * Affiche un bouton qui redirige vers Stripe Checkout pour souscrire au plan Pro.
- * Gère l'état de chargement pendant la création de la session.
+ * Utilise useFormStatus pour gérer correctement l'état pending de la Server Action.
  * 
  * @param locale - La locale de l'application
  * @param label - Le texte du bouton (par défaut: "Passer Pro")
@@ -32,36 +67,10 @@ export function ProButton({
   variant = "default",
   className = "",
 }: ProButtonProps) {
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleClick = async () => {
-    setIsLoading(true);
-    try {
-      const formData = new FormData();
-      formData.append("locale", locale);
-      await redirectToCheckout(formData);
-    } catch (error) {
-      console.error("Erreur lors de la redirection vers Stripe:", error);
-      setIsLoading(false);
-    }
-  };
-
   return (
-    <Button
-      onClick={handleClick}
-      disabled={isLoading}
-      variant={variant}
-      className={className}
-      size="lg"
-    >
-      {isLoading ? (
-        <>
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Redirection...
-        </>
-      ) : (
-        label
-      )}
-    </Button>
+    <form action={redirectToCheckout}>
+      <input type="hidden" name="locale" value={locale} />
+      <SubmitButton label={label} variant={variant} className={className} />
+    </form>
   );
 }

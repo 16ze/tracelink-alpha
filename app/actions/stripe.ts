@@ -11,11 +11,22 @@ import { redirect } from "next/navigation";
  * @returns L'URL de redirection vers Stripe Checkout ou null en cas d'erreur
  */
 export async function createCheckoutSession(locale: string): Promise<string | null> {
+  console.log("[createCheckoutSession] Action appelée avec locale:", locale);
+  
   // Vérification de la configuration Stripe
   if (!isStripeConfigured()) {
-    console.error("Stripe n'est pas correctement configuré");
+    console.error("[createCheckoutSession] Stripe n'est pas correctement configuré");
     return null;
   }
+
+  // Utilisation directe de la variable d'environnement côté serveur (sécurisé)
+  const proPriceId = process.env.STRIPE_PRO_PRICE_ID;
+  if (!proPriceId) {
+    console.error("[createCheckoutSession] STRIPE_PRO_PRICE_ID manquant dans les variables d'environnement");
+    return null;
+  }
+  
+  console.log("[createCheckoutSession] Configuration validée, création de la session...");
 
   // Récupération de l'utilisateur connecté
   const supabase = await createClient();
@@ -71,7 +82,7 @@ export async function createCheckoutSession(locale: string): Promise<string | nu
       payment_method_types: ["card"],
       line_items: [
         {
-          price: stripeConfig.proPriceId,
+          price: proPriceId, // Utilisation directe de la variable d'environnement
           quantity: 1,
         },
       ],

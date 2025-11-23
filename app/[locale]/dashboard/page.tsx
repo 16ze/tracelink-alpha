@@ -66,12 +66,9 @@ export default async function DashboardPage({
 
   // Vérification du statut d'abonnement et de la configuration Stripe
   const stripeConfigured = isStripeConfigured();
-  // Un utilisateur est en mode gratuit si :
-  // - Il n'a pas de marque, OU
-  // - Sa marque a un statut différent de "active" (null, "free", "canceled", etc.)
-  const isFreePlan = brand
-    ? brand.subscription_status === null || brand.subscription_status !== "active"
-    : false; // Si pas de marque, on considère comme gratuit
+  // Un utilisateur est en mode gratuit si sa marque a un statut différent de "active"
+  // Condition simplifiée : subscription_status !== 'active'
+  const isFreePlan = brand ? brand.subscription_status !== "active" : false;
 
   // Logs de débogage (à retirer en production)
   if (process.env.NODE_ENV === "development") {
@@ -125,10 +122,6 @@ export default async function DashboardPage({
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                {/* Bouton Pro (affiché uniquement si Stripe est configuré et utilisateur en mode gratuit) */}
-                {stripeConfigured && isFreePlan && (
-                  <ProButton locale={locale} label="Passer Pro" variant="outline" />
-                )}
                 <Link href={`/${locale}/dashboard/products/new`}>
                   <Button className="gap-2">
                     <Plus className="h-4 w-4" />
