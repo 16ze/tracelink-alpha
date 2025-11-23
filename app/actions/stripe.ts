@@ -48,20 +48,48 @@ export async function createCheckoutSession(locale: string): Promise<string | nu
   try {
     // Récupération de la marque de l'utilisateur
     console.log("[createCheckoutSession] Récupération de la marque...");
+    // On sélectionne d'abord seulement l'id pour éviter l'erreur si la colonne n'existe pas
     const { data: brand, error: brandError } = await supabase
       .from("brands")
-      .select("id, stripe_customer_id")
+      .select("id")
       .eq("owner_id", user.id)
       .single();
 
     if (brandError || !brand) {
       console.error("❌ [createCheckoutSession] Erreur lors de la récupération de la marque:", brandError);
+      // Si l'erreur est liée à une colonne manquante, on informe l'utilisateur
+      if (brandError?.code === "42703") {
+        console.error("❌ [createCheckoutSession] ERREUR: La migration Stripe n'a pas été appliquée à la base de données!");
+        console.error("❌ [createCheckoutSession] Veuillez exécuter le fichier: supabase/migrations/add_stripe_subscription_fields.sql");
+      }
       return null;
     }
     console.log("[createCheckoutSession] Marque récupérée:", brand.id);
 
+    // Tentative de récupération du stripe_customer_id (si la colonne existe)
+    let customerId: string | null = null;
+    try {
+      const { data: brandWithStripe, error: stripeError } = await supabase
+        .from("brands")
+        .select("stripe_customer_id")
+        .eq("id", brand.id)
+        .single();
+      
+      if (!stripeError && brandWithStripe) {
+        customerId = brandWithStripe.stripe_customer_id;
+        console.log("[createCheckoutSession] Customer ID récupéré:", customerId || "Aucun");
+      } else if (stripeError?.code === "42703") {
+        // Colonne n'existe pas encore - c'est normal si la migration n'a pas été appliquée
+        console.warn("⚠️ [createCheckoutSession] La colonne stripe_customer_id n'existe pas encore. La migration doit être appliquée.");
+        customerId = null;
+      }
+    } catch (err) {
+      console.warn("⚠️ [createCheckoutSession] Impossible de récupérer stripe_customer_id:", err);
+      customerId = null;
+    }
+
     // Création ou récupération du client Stripe
-    let customerId = brand.stripe_customer_id;
+    // customerId a déjà été récupéré ci-dessus
     console.log("[createCheckoutSession] Customer ID existant:", customerId || "Aucun");
 
     // Vérification que l'instance Stripe est disponible
@@ -84,12 +112,25 @@ export async function createCheckoutSession(locale: string): Promise<string | nu
       customerId = customer.id;
       console.log("[createCheckoutSession] Nouveau client Stripe créé:", customerId);
 
-      // Mise à jour de la marque avec le customer_id
-      await supabase
-        .from("brands")
-        .update({ stripe_customer_id: customerId })
-        .eq("id", brand.id);
-      console.log("[createCheckoutSession] Marque mise à jour avec le customer_id");
+      // Mise à jour de la marque avec le customer_id (si la colonne existe)
+      try {
+        const { error: updateError } = await supabase
+          .from("brands")
+          .update({ stripe_customer_id: customerId })
+          .eq("id", brand.id);
+        
+        if (updateError) {
+          if (updateError.code === "42703") {
+            console.warn("⚠️ [createCheckoutSession] Impossible de mettre à jour stripe_customer_id: la colonne n'existe pas. La migration doit être appliquée.");
+          } else {
+            console.error("❌ [createCheckoutSession] Erreur lors de la mise à jour:", updateError);
+          }
+        } else {
+          console.log("[createCheckoutSession] Marque mise à jour avec le customer_id");
+        }
+      } catch (err) {
+        console.warn("⚠️ [createCheckoutSession] Erreur lors de la mise à jour du customer_id:", err);
+      }
     }
 
     // Création de la session de checkout
