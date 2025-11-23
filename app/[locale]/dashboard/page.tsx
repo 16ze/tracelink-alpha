@@ -70,17 +70,6 @@ export default async function DashboardPage({
   // Condition simplifiée : subscription_status !== 'active'
   const isFreePlan = brand ? brand.subscription_status !== "active" : false;
 
-  // Logs de débogage (à retirer en production)
-  if (process.env.NODE_ENV === "development") {
-    console.log("[Dashboard Debug]", {
-      stripeConfigured,
-      hasBrand: !!brand,
-      subscriptionStatus: brand?.subscription_status,
-      isFreePlan,
-      shouldShowButton: stripeConfigured && isFreePlan && brand,
-    });
-  }
-
   return (
     <main className="min-h-screen bg-muted/40 p-8">
       <div className="max-w-7xl mx-auto space-y-8">
@@ -130,62 +119,6 @@ export default async function DashboardPage({
                 </Link>
               </div>
             </div>
-
-            {/* Message de débogage (uniquement en développement) */}
-            {process.env.NODE_ENV === "development" && (
-              <Card className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950">
-                <CardHeader>
-                  <CardTitle className="text-sm">🐛 Debug Info</CardTitle>
-                </CardHeader>
-                <CardContent className="text-xs space-y-2">
-                  <div className="grid grid-cols-2 gap-2">
-                    <p>
-                      <strong>Stripe configuré:</strong> {stripeConfigured ? "✅ Oui" : "❌ Non"}
-                    </p>
-                    <p>
-                      <strong>Statut abonnement:</strong> {brand.subscription_status || "null"}
-                    </p>
-                    <p>
-                      <strong>Plan gratuit:</strong> {isFreePlan ? "✅ Oui" : "❌ Non"}
-                    </p>
-                    <p>
-                      <strong>Bouton visible:</strong>{" "}
-                      {stripeConfigured && isFreePlan ? "✅ Oui" : "❌ Non"}
-                    </p>
-                  </div>
-                  {!stripeConfigured && (
-                    <div className="mt-3 p-2 bg-red-100 dark:bg-red-900/20 rounded border border-red-300">
-                      <p className="text-red-700 dark:text-red-400 font-semibold mb-2">
-                        ⚠️ Variables d'environnement manquantes ou invalides:
-                      </p>
-                      <ul className="list-disc list-inside space-y-1 text-red-600 dark:text-red-300">
-                        <li>
-                          STRIPE_SECRET_KEY:{" "}
-                          {process.env.STRIPE_SECRET_KEY
-                            ? `✅ Présente (${process.env.STRIPE_SECRET_KEY.substring(0, 7)}...)`
-                            : "❌ Manquante"}
-                        </li>
-                        <li>
-                          STRIPE_PRO_PRICE_ID:{" "}
-                          {process.env.STRIPE_PRO_PRICE_ID
-                            ? `✅ Présente (${process.env.STRIPE_PRO_PRICE_ID.substring(0, 7)}...)`
-                            : "❌ Manquante"}
-                        </li>
-                        <li>
-                          NEXT_PUBLIC_APP_URL:{" "}
-                          {process.env.NEXT_PUBLIC_APP_URL
-                            ? `✅ Présente (${process.env.NEXT_PUBLIC_APP_URL})`
-                            : "❌ Manquante"}
-                        </li>
-                      </ul>
-                      <p className="text-red-600 dark:text-red-400 text-xs mt-2">
-                        💡 Astuce: Redémarrez le serveur Next.js après avoir modifié .env.local
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
 
             {/* Liste des produits */}
             {products.length === 0 ? (

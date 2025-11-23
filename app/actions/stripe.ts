@@ -11,28 +11,18 @@ import { redirect } from "next/navigation";
  * @returns L'URL de redirection vers Stripe Checkout ou null en cas d'erreur
  */
 export async function createCheckoutSession(locale: string): Promise<string | null> {
-  console.log("🔍 DEBUG STRIPE START");
-  console.log("Variabe PRICE_ID:", process.env.STRIPE_PRO_PRICE_ID);
-  console.log("Variable KEY exists:", !!process.env.STRIPE_SECRET_KEY);
-  console.log("[createCheckoutSession] Action appelée avec locale:", locale);
-  
   // Vérification de la configuration Stripe
   if (!isStripeConfigured()) {
-    console.error("[createCheckoutSession] Stripe n'est pas correctement configuré");
     return null;
   }
 
   // Utilisation directe de la variable d'environnement côté serveur (sécurisé)
   const proPriceId = process.env.STRIPE_PRO_PRICE_ID;
   if (!proPriceId) {
-    console.error("[createCheckoutSession] STRIPE_PRO_PRICE_ID manquant dans les variables d'environnement");
     return null;
   }
-  
-  console.log("[createCheckoutSession] Configuration validée, création de la session...");
 
   // Récupération de l'utilisateur connecté
-  console.log("[createCheckoutSession] Récupération de l'utilisateur...");
   const supabase = await createClient();
   const {
     data: { user },
@@ -40,14 +30,11 @@ export async function createCheckoutSession(locale: string): Promise<string | nu
   } = await supabase.auth.getUser();
 
   if (userError || !user) {
-    console.error("❌ [createCheckoutSession] Erreur lors de la récupération de l'utilisateur:", userError);
     return null;
   }
-  console.log("[createCheckoutSession] Utilisateur récupéré:", user.id);
 
   try {
     // Récupération de la marque de l'utilisateur
-    console.log("[createCheckoutSession] Récupération de la marque...");
     // On sélectionne d'abord seulement l'id pour éviter l'erreur si la colonne n'existe pas
     const { data: brand, error: brandError } = await supabase
       .from("brands")
@@ -56,15 +43,8 @@ export async function createCheckoutSession(locale: string): Promise<string | nu
       .single();
 
     if (brandError || !brand) {
-      console.error("❌ [createCheckoutSession] Erreur lors de la récupération de la marque:", brandError);
-      // Si l'erreur est liée à une colonne manquante, on informe l'utilisateur
-      if (brandError?.code === "42703") {
-        console.error("❌ [createCheckoutSession] ERREUR: La migration Stripe n'a pas été appliquée à la base de données!");
-        console.error("❌ [createCheckoutSession] Veuillez exécuter le fichier: supabase/migrations/add_stripe_subscription_fields.sql");
-      }
       return null;
     }
-    console.log("[createCheckoutSession] Marque récupérée:", brand.id);
 
     // Tentative de récupération du stripe_customer_id (si la colonne existe)
     let customerId: string | null = null;
@@ -77,29 +57,18 @@ export async function createCheckoutSession(locale: string): Promise<string | nu
       
       if (!stripeError && brandWithStripe) {
         customerId = brandWithStripe.stripe_customer_id;
-        console.log("[createCheckoutSession] Customer ID récupéré:", customerId || "Aucun");
-      } else if (stripeError?.code === "42703") {
-        // Colonne n'existe pas encore - c'est normal si la migration n'a pas été appliquée
-        console.warn("⚠️ [createCheckoutSession] La colonne stripe_customer_id n'existe pas encore. La migration doit être appliquée.");
-        customerId = null;
       }
     } catch (err) {
-      console.warn("⚠️ [createCheckoutSession] Impossible de récupérer stripe_customer_id:", err);
+      // Colonne n'existe pas encore - ignoré silencieusement
       customerId = null;
     }
 
-    // Création ou récupération du client Stripe
-    // customerId a déjà été récupéré ci-dessus
-    console.log("[createCheckoutSession] Customer ID existant:", customerId || "Aucun");
-
     // Vérification que l'instance Stripe est disponible
     if (!stripe) {
-      console.error("❌ [createCheckoutSession] Instance Stripe non disponible (null)");
       return null;
     }
 
     if (!customerId) {
-      console.log("[createCheckoutSession] Création d'un nouveau client Stripe...");
       // Création d'un nouveau client Stripe
       const customer = await stripe.customers.create({
         email: user.email || undefined,
@@ -110,37 +79,19 @@ export async function createCheckoutSession(locale: string): Promise<string | nu
       });
 
       customerId = customer.id;
-      console.log("[createCheckoutSession] Nouveau client Stripe créé:", customerId);
 
       // Mise à jour de la marque avec le customer_id (si la colonne existe)
       try {
-        const { error: updateError } = await supabase
+        await supabase
           .from("brands")
           .update({ stripe_customer_id: customerId })
           .eq("id", brand.id);
-        
-        if (updateError) {
-          if (updateError.code === "42703") {
-            console.warn("⚠️ [createCheckoutSession] Impossible de mettre à jour stripe_customer_id: la colonne n'existe pas. La migration doit être appliquée.");
-          } else {
-            console.error("❌ [createCheckoutSession] Erreur lors de la mise à jour:", updateError);
-          }
-        } else {
-          console.log("[createCheckoutSession] Marque mise à jour avec le customer_id");
-        }
       } catch (err) {
-        console.warn("⚠️ [createCheckoutSession] Erreur lors de la mise à jour du customer_id:", err);
+        // Colonne n'existe pas encore - ignoré silencieusement
       }
     }
 
     // Création de la session de checkout
-    console.log("[createCheckoutSession] Création de la session Stripe Checkout...");
-    console.log("[createCheckoutSession] Paramètres:", {
-      customerId,
-      proPriceId,
-      locale,
-      appUrl: stripeConfig.appUrl,
-    });
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: "subscription",
@@ -160,14 +111,8 @@ export async function createCheckoutSession(locale: string): Promise<string | nu
       locale: locale === "en" ? "en" : "fr",
     });
 
-    console.log("[createCheckoutSession] Session créée avec succès, URL:", session.url);
     return session.url;
   } catch (error) {
-    console.error("❌ ERREUR FATALE STRIPE:", error);
-    if (error instanceof Error) {
-      console.error("Message d'erreur:", error.message);
-      console.error("Stack trace:", error.stack);
-    }
     console.error("Erreur lors de la création de la session de checkout:", error);
     return null;
   }
@@ -197,27 +142,17 @@ export async function redirectToCheckout(
 ): Promise<CheckoutActionState> {
   "use server";
   
-  console.log("🔍 [redirectToCheckout] Début de la fonction");
   const locale = (formData.get("locale") as string) || "fr";
-  console.log("🔍 [redirectToCheckout] Locale extraite:", locale);
   
   try {
     const checkoutUrl = await createCheckoutSession(locale);
-    console.log("🔍 [redirectToCheckout] URL de checkout reçue:", checkoutUrl ? "✅ Présente" : "❌ Null/Undefined");
 
     if (checkoutUrl) {
-      console.log("🔍 [redirectToCheckout] Retour de l'URL de checkout");
       return { checkoutUrl };
     } else {
-      console.error("❌ [redirectToCheckout] Échec - createCheckoutSession a retourné null");
-      return { error: "Impossible de créer la session de checkout. Vérifiez les logs serveur pour plus de détails." };
+      return { error: "Impossible de créer la session de checkout. Veuillez réessayer." };
     }
   } catch (error) {
-    console.error("❌ [redirectToCheckout] Exception capturée:", error);
-    if (error instanceof Error) {
-      console.error("❌ [redirectToCheckout] Message d'erreur:", error.message);
-      console.error("❌ [redirectToCheckout] Stack:", error.stack);
-    }
     return { error: `Erreur lors de la création de la session: ${error instanceof Error ? error.message : "Erreur inconnue"}` };
   }
 }

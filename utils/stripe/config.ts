@@ -21,18 +21,6 @@ export function isStripeConfigured(): boolean {
   const hasPriceId = !!stripeProPriceId && stripeProPriceId.startsWith("price_");
   const hasAppUrl = !!appUrl;
 
-  // Logs de débogage en développement
-  if (process.env.NODE_ENV === "development") {
-    console.log("[Stripe Config Debug]", {
-      hasSecretKey,
-      hasPriceId,
-      hasAppUrl,
-      secretKeyPrefix: stripeSecretKey?.substring(0, 7) || "missing",
-      priceIdPrefix: stripeProPriceId?.substring(0, 7) || "missing",
-      appUrl: appUrl || "missing",
-    });
-  }
-
   return hasSecretKey && hasPriceId && hasAppUrl;
 }
 

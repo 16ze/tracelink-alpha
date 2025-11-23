@@ -80,7 +80,6 @@ export function ProButton({
     prevState: CheckoutActionState | null,
     formData: FormData
   ) => {
-    console.log("🔍 [ProButton CLIENT] Appel de redirectToCheckout");
     formData.set("locale", locale);
     return redirectToCheckout(prevState, formData);
   };
@@ -94,12 +93,9 @@ export function ProButton({
   // Gestion de la redirection côté client quand l'URL est disponible
   useEffect(() => {
     if (state?.checkoutUrl) {
-      console.log("🔍 [ProButton CLIENT] Redirection vers:", state.checkoutUrl);
       window.location.href = state.checkoutUrl;
     } else if (state?.error) {
-      console.error("❌ [ProButton CLIENT] Erreur:", state.error);
-      // Afficher une alerte pour informer l'utilisateur
-      alert(`Erreur lors de la création de la session de checkout:\n\n${state.error}\n\nVérifiez les logs du serveur pour plus de détails.`);
+      alert(`Erreur lors de la création de la session de checkout:\n\n${state.error}`);
     }
   }, [state]);
 
