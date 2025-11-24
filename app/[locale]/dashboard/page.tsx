@@ -74,11 +74,11 @@ export default async function DashboardPage({
     isPaymentSuccess = 
       checkoutParam === "success" || 
       successParam === "true";
-    
-    // Force le rafraîchissement des données si le paiement vient d'être effectué
-    if (isPaymentSuccess) {
+  
+  // Force le rafraîchissement des données si le paiement vient d'être effectué
+  if (isPaymentSuccess) {
       try {
-        revalidatePath(`/${locale}/dashboard`);
+    revalidatePath(`/${locale}/dashboard`);
       } catch (error) {
         console.error("❌ Erreur lors de la revalidation du cache:", error);
         // On continue même si la revalidation échoue
@@ -96,10 +96,10 @@ export default async function DashboardPage({
   
   try {
     const supabase = await createClient();
-    const {
+  const {
       data: { user: authUser },
       error: userError,
-    } = await supabase.auth.getUser();
+  } = await supabase.auth.getUser();
 
     if (userError) {
       console.error("❌ Erreur lors de la récupération de l'utilisateur:", userError);
@@ -235,14 +235,27 @@ export default async function DashboardPage({
                 <p className="text-muted-foreground">
                   Gérez vos produits et créez vos passeports numériques
                 </p>
+                {/* Compteur de produits pour plan gratuit */}
+                {isFreePlan && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Produits : {products.length} / 10 (Plan Gratuit)
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-3">
+                {isFreePlan && products.length >= 10 ? (
+                  <Button className="gap-2" disabled>
+                    <Plus className="h-4 w-4" />
+                    Limite atteinte
+                  </Button>
+                ) : (
                 <Link href={`/${locale}/dashboard/products/new`}>
                   <Button className="gap-2">
                     <Plus className="h-4 w-4" />
                     Nouveau Produit
                   </Button>
                 </Link>
+                )}
               </div>
             </div>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Eye, Upload } from "lucide-react";
+import { Eye, Upload, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { TableCell, TableRow } from "@/components/ui/table";
@@ -20,6 +20,10 @@ interface ComponentTableRowProps {
   IconComponent: React.ComponentType<{ className?: string }>;
   hasCertificate: boolean;
   certificate: DatabaseCertificate | null;
+  /**
+   * Indique si l'utilisateur est en plan Pro (autorise l'upload de certificats)
+   */
+  isProPlan?: boolean;
 }
 
 /**
@@ -31,8 +35,18 @@ export function ComponentTableRow({
   IconComponent,
   hasCertificate,
   certificate,
+  isProPlan = false,
 }: ComponentTableRowProps) {
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+
+  /**
+   * Gère le clic sur le bouton d'upload pour les utilisateurs gratuits
+   */
+  const handleLockedUpload = () => {
+    alert(
+      "L'ajout de certificats PDF est réservé aux membres Pro.\n\nPassez Pro pour débloquer cette fonctionnalité."
+    );
+  };
 
   return (
     <>
@@ -59,7 +73,7 @@ export function ComponentTableRow({
                 <Eye className="h-4 w-4" />
               </Button>
             </div>
-          ) : (
+          ) : isProPlan ? (
             <Button
               variant="outline"
               size="sm"
@@ -68,6 +82,16 @@ export function ComponentTableRow({
             >
               <Upload className="h-4 w-4" />
               Ajouter une preuve
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLockedUpload}
+              className="gap-2 bg-white text-muted-foreground"
+            >
+              <Lock className="h-4 w-4" />
+              Pro uniquement
             </Button>
           )}
         </TableCell>

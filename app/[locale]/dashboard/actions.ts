@@ -278,6 +278,35 @@ export async function createProduct(
     };
   }
 
+  // ============================================
+  // VÉRIFICATION DE LA LIMITE DE PRODUITS (PLAN GRATUIT)
+  // ============================================
+  // Récupération du statut d'abonnement
+  // @ts-ignore - Les types Supabase ne reconnaissent pas encore les colonnes Stripe
+  const subscriptionStatus = (brand as any)?.subscription_status;
+
+  // Si l'utilisateur n'est pas en plan Pro (subscription_status !== 'active')
+  if (subscriptionStatus !== "active") {
+    // Compter le nombre de produits existants pour cette marque
+    const { count, error: countError } = await supabase
+      .from("products")
+      .select("*", { count: "exact", head: true })
+      .eq("brand_id", brand.id);
+
+    if (countError) {
+      console.error("Erreur lors du comptage des produits:", countError);
+      // En cas d'erreur, on continue (sécurité : on assume qu'il peut créer)
+    } else {
+      // Limite de 10 produits pour le plan gratuit
+      const MAX_PRODUCTS_FREE = 10;
+      if (count !== null && count >= MAX_PRODUCTS_FREE) {
+        return {
+          error: "Limite de 10 produits atteinte. Passez Pro pour illimité.",
+        };
+      }
+    }
+  }
+
   // Récupération des données du formulaire
   const name = formData.get("name") as string;
   const sku = formData.get("sku") as string;
@@ -719,6 +748,28 @@ export async function uploadCertificate(
   if (!product) {
     return {
       error: "Vous n'avez pas accès à ce composant",
+    };
+  }
+
+  // ============================================
+  // VÉRIFICATION DU PLAN (CERTIFICATS RÉSERVÉS AUX MEMBRES PRO)
+  // ============================================
+  // Récupération de la marque pour vérifier le statut d'abonnement
+  const brand = await getUserBrand();
+  if (!brand) {
+    return {
+      error: "Marque non trouvée",
+    };
+  }
+
+  // Récupération du statut d'abonnement
+  // @ts-ignore - Les types Supabase ne reconnaissent pas encore les colonnes Stripe
+  const subscriptionStatus = (brand as any)?.subscription_status;
+
+  // Si l'utilisateur n'est pas en plan Pro (subscription_status !== 'active')
+  if (subscriptionStatus !== "active") {
+    return {
+      error: "L'ajout de certificats PDF est réservé aux membres Pro.",
     };
   }
 

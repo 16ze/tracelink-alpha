@@ -17,6 +17,7 @@ import {
   getProductById,
   getProductComponents,
   getComponentCertificates,
+  getUserBrand,
 } from "../../actions";
 import type { DatabaseProduct, DatabaseComponent } from "@/types/supabase";
 import { ProductGeneralTab } from "@/components/dashboard/product-general-tab";
@@ -54,6 +55,14 @@ export default async function ProductDetailPage({
   if (!product) {
     notFound();
   }
+
+  // Récupération de la marque pour vérifier le statut d'abonnement
+  const brand = await getUserBrand();
+  
+  // Vérification du statut d'abonnement
+  // @ts-ignore - Les types Supabase ne reconnaissent pas encore les colonnes Stripe
+  const subscriptionStatus = brand ? (brand as any)?.subscription_status : null;
+  const isProPlan = subscriptionStatus === "active";
 
   // Récupération des composants du produit avec leurs certificats
   const components = await getProductComponents(id);
@@ -204,6 +213,7 @@ export default async function ProductDetailPage({
             <ProductCompositionTab
               productId={product.id}
               components={componentsWithCertificates}
+              isProPlan={isProPlan}
             />
           </TabsContent>
         </Tabs>

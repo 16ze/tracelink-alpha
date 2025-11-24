@@ -81,6 +81,10 @@ interface ProductCompositionTabProps {
    * Liste des composants actuels avec leurs certificats
    */
   components: ComponentWithCertificates[];
+  /**
+   * Indique si l'utilisateur est en plan Pro
+   */
+  isProPlan?: boolean;
 }
 
 /**
@@ -113,6 +117,7 @@ function SubmitButton({
 export function ProductCompositionTab({
   productId,
   components,
+  isProPlan = false,
 }: ProductCompositionTabProps) {
   // État pour le formulaire avec useActionState (React 19)
   const [state, formAction] = useActionState<ComponentActionState | null, FormData>(
@@ -200,6 +205,7 @@ export function ProductCompositionTab({
                       IconComponent={IconComponent}
                       hasCertificate={!!hasCertificate}
                       certificate={certificate}
+                      isProPlan={isProPlan}
                     />
                   );
                 })}
