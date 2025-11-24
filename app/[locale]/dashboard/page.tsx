@@ -73,8 +73,7 @@ export default async function DashboardPage({
     
     isPaymentSuccess = 
       checkoutParam === "success" || 
-      successParam === "true" ||
-      successParam === true;
+      successParam === "true";
     
     // Force le rafraîchissement des données si le paiement vient d'être effectué
     if (isPaymentSuccess) {
