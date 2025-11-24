@@ -11,24 +11,8 @@ import { redirect } from "next/navigation";
  * @returns L'URL de redirection vers Stripe Checkout ou null en cas d'erreur
  */
 export async function createCheckoutSession(locale: string): Promise<string | null> {
-  // Logs de vérification des variables d'environnement
-  console.log('🔑 Checking Keys - Secret:', !!process.env.STRIPE_SECRET_KEY, 'PriceID:', !!process.env.STRIPE_PRO_PRICE_ID);
-  
-  // Vérification de la configuration Stripe
-  if (!isStripeConfigured()) {
-    console.error("❌ Stripe n'est pas correctement configuré");
-    return null;
-  }
-
-  // Utilisation directe de la variable d'environnement côté serveur (sécurisé)
-  const proPriceId = process.env.STRIPE_PRO_PRICE_ID;
-  if (!proPriceId) {
-    console.error("❌ STRIPE_PRO_PRICE_ID n'est pas définie");
-    return null;
-  }
-
   // ============================================
-  // 1. VÉRIFICATION AUTHENTIFICATION (HORS try/catch)
+  // 1. VÉRIFICATION AUTHENTIFICATION (HORS try/catch - EN PREMIER)
   // ============================================
   const supabase = await createClient();
   const {
@@ -60,7 +44,26 @@ export async function createCheckoutSession(locale: string): Promise<string | nu
   const brandId = (brand as any).id;
 
   // ============================================
-  // 2. LOGIQUE STRIPE (DANS le try/catch)
+  // 2. VÉRIFICATIONS DE CONFIGURATION
+  // ============================================
+  // Logs de vérification des variables d'environnement
+  console.log('🔑 Checking Keys - Secret:', !!process.env.STRIPE_SECRET_KEY, 'PriceID:', !!process.env.STRIPE_PRO_PRICE_ID);
+  
+  // Vérification de la configuration Stripe
+  if (!isStripeConfigured()) {
+    console.error("❌ Stripe n'est pas correctement configuré");
+    return null;
+  }
+
+  // Utilisation directe de la variable d'environnement côté serveur (sécurisé)
+  const proPriceId = process.env.STRIPE_PRO_PRICE_ID;
+  if (!proPriceId) {
+    console.error("❌ STRIPE_PRO_PRICE_ID n'est pas définie");
+    return null;
+  }
+
+  // ============================================
+  // 3. LOGIQUE STRIPE (DANS le try/catch)
   // ============================================
   try {
 
