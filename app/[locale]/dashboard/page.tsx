@@ -37,6 +37,7 @@ async function logoutAction(formData: FormData) {
  * Page Dashboard (tableau de bord)
  *
  * Page principale après authentification.
+ * Version ultra-résistante aux erreurs : en cas d'erreur, la page s'affiche en mode "défaut" (gratuit).
  *
  * Scénario A (Pas de marque) : Affiche le formulaire de création de marque
  * Scénario B (Marque existante) : Affiche un message de bienvenue et les actions possibles
@@ -48,45 +49,142 @@ export default async function DashboardPage({
   params: Promise<{ locale: string }>;
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const { locale } = await params;
-  const searchParamsResolved = await searchParams;
-  const supabase = await createClient();
-  
-  // Détection du retour de paiement réussi
-  const isPaymentSuccess = 
-    searchParamsResolved.checkout === "success" || 
-    searchParamsResolved.success === "true";
-  
-  // Force le rafraîchissement des données si le paiement vient d'être effectué
-  if (isPaymentSuccess) {
-    revalidatePath(`/${locale}/dashboard`);
+  // ============================================
+  // 1. RÉCUPÉRATION SÉCURISÉE DES PARAMÈTRES
+  // ============================================
+  let locale: string = "fr";
+  let searchParamsResolved: { [key: string]: string | string[] | undefined } = {};
+  let isPaymentSuccess: boolean = false;
+
+  try {
+    const paramsResolved = await params;
+    locale = paramsResolved.locale || "fr";
+  } catch (error) {
+    console.error("❌ Erreur lors de la récupération des params:", error);
+    // On continue avec la locale par défaut
   }
 
-  // Récupération de l'utilisateur connecté
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  try {
+    searchParamsResolved = await searchParams;
+    
+    // Détection du retour de paiement réussi (sécurisé)
+    const checkoutParam = searchParamsResolved.checkout;
+    const successParam = searchParamsResolved.success;
+    
+    isPaymentSuccess = 
+      checkoutParam === "success" || 
+      successParam === "true" ||
+      successParam === true;
+    
+    // Force le rafraîchissement des données si le paiement vient d'être effectué
+    if (isPaymentSuccess) {
+      try {
+        revalidatePath(`/${locale}/dashboard`);
+      } catch (error) {
+        console.error("❌ Erreur lors de la revalidation du cache:", error);
+        // On continue même si la revalidation échoue
+      }
+    }
+  } catch (error) {
+    console.error("❌ Erreur lors de la récupération des searchParams:", error);
+    // On continue avec les valeurs par défaut
+  }
 
-  // Si l'utilisateur n'est pas connecté, redirection vers login
-  // (normalement géré par le middleware, mais sécurité supplémentaire)
-  if (!user) {
+  // ============================================
+  // 2. VÉRIFICATION D'AUTHENTIFICATION
+  // ============================================
+  let user: { id: string; email?: string } | null = null;
+  
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user: authUser },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError) {
+      console.error("❌ Erreur lors de la récupération de l'utilisateur:", userError);
+      // Redirection vers login seulement si erreur d'auth réelle
+      redirect(`/${locale}/login`);
+    }
+
+    if (!authUser) {
+      redirect(`/${locale}/login`);
+    }
+
+    user = authUser;
+  } catch (error) {
+    console.error("❌ Erreur inattendue lors de l'authentification:", error);
+    // Si c'est une erreur de redirection Next.js, on la propage
+    if (error && typeof error === 'object' && 'digest' in error && (error as any).digest?.startsWith('NEXT_REDIRECT')) {
+      throw error;
+    }
+    // Sinon, redirection vers login
     redirect(`/${locale}/login`);
   }
 
-  // Récupération de la marque de l'utilisateur
-  const brand = await getUserBrand();
+  // ============================================
+  // 3. RÉCUPÉRATION DES DONNÉES (AVEC GESTION D'ERREUR)
+  // ============================================
+  let brand: Awaited<ReturnType<typeof getUserBrand>> = null;
+  let products: Awaited<ReturnType<typeof getUserProducts>> = [];
 
-  // Récupération des produits de l'utilisateur (si marque existe)
-  const products = brand ? await getUserProducts() : [];
+  try {
+    brand = await getUserBrand();
+  } catch (error) {
+    console.error("❌ Erreur lors de la récupération de la marque:", error);
+    // On continue avec brand = null (mode défaut)
+  }
 
-  // Vérification du statut d'abonnement et de la configuration Stripe
-  const stripeConfigured = isStripeConfigured();
-  // Un utilisateur est en mode gratuit si sa marque a un statut différent de "active"
-  // Condition simplifiée : subscription_status !== 'active'
-  // Masquer le bouton de manière optimiste si le paiement vient d'être effectué
-  const isFreePlan = brand 
-    ? brand.subscription_status !== "active" && !isPaymentSuccess
-    : false;
+  try {
+    if (brand) {
+      products = await getUserProducts();
+    }
+  } catch (error) {
+    console.error("❌ Erreur lors de la récupération des produits:", error);
+    // On continue avec products = [] (tableau vide)
+  }
+
+  // ============================================
+  // 4. VÉRIFICATION DU STATUT D'ABONNEMENT (SÉCURISÉE)
+  // ============================================
+  let stripeConfigured: boolean = false;
+  let isFreePlan: boolean = true; // Par défaut, on assume le plan gratuit
+
+  try {
+    stripeConfigured = isStripeConfigured();
+  } catch (error) {
+    console.error("❌ Erreur lors de la vérification de la configuration Stripe:", error);
+    // On continue avec stripeConfigured = false
+  }
+
+  // Vérification sécurisée du statut d'abonnement
+  if (brand) {
+    try {
+      // Accès sécurisé à subscription_status avec vérification d'existence
+      const subscriptionStatus = (brand as any)?.subscription_status;
+      
+      // Un utilisateur est en mode gratuit si :
+      // - subscription_status n'existe pas OU
+      // - subscription_status !== 'active' ET ce n'est pas juste après un paiement
+      isFreePlan = 
+        !subscriptionStatus || 
+        (subscriptionStatus !== "active" && !isPaymentSuccess);
+    } catch (error) {
+      console.error("❌ Erreur lors de la vérification du statut d'abonnement:", error);
+      // En cas d'erreur, on assume le plan gratuit (sécurité)
+      isFreePlan = true;
+    }
+  } else {
+    isFreePlan = false; // Pas de marque = pas de plan à afficher
+  }
+
+  // Vérification de sécurité finale : si user est null après toutes les vérifications,
+  // on ne devrait jamais arriver ici (normalement redirigé), mais on sécurise quand même
+  if (!user) {
+    console.error("❌ ERREUR CRITIQUE: user est null après vérification d'auth");
+    redirect(`/${locale}/login`);
+  }
 
   return (
     <main className="min-h-screen bg-muted/40 p-8">
@@ -133,7 +231,7 @@ export default async function DashboardPage({
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-bold tracking-tight">
-                  Bienvenue chez {brand.name}
+                  Bienvenue chez {brand?.name || "votre marque"}
                 </h2>
                 <p className="text-muted-foreground">
                   Gérez vos produits et créez vos passeports numériques
@@ -237,9 +335,9 @@ export default async function DashboardPage({
                 <CardContent className="space-y-2">
                   <div>
                     <p className="text-sm text-muted-foreground">Nom de la marque</p>
-                    <p className="font-medium">{brand.name}</p>
+                    <p className="font-medium">{brand?.name || "Non défini"}</p>
                   </div>
-                  {brand.website_url && (
+                  {brand?.website_url && (
                     <div>
                       <p className="text-sm text-muted-foreground">Site Web</p>
                       <a
