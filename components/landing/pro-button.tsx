@@ -1,12 +1,10 @@
 "use client";
 
-import {
-  redirectToCheckout,
-  type CheckoutActionState,
-} from "@/app/actions/stripe";
+import { createCheckoutSession } from "@/app/actions/stripe";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
-import { useActionState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 /**
  * Props du composant ProButton
@@ -32,19 +30,22 @@ function SubmitButton({
   variant,
   className,
   isPending,
+  onClick,
 }: {
   label: string;
   variant: ProButtonProps["variant"];
   className: string;
   isPending: boolean;
+  onClick: () => void;
 }) {
   return (
     <Button
-      type="submit"
+      type="button"
       disabled={isPending}
       variant={variant || "default"}
       className={className}
       size="lg"
+      onClick={onClick}
     >
       {isPending ? (
         <>
@@ -62,7 +63,7 @@ function SubmitButton({
  * Composant bouton pour passer au plan Pro
  *
  * Affiche un bouton qui redirige vers Stripe Checkout pour souscrire au plan Pro.
- * Utilise useFormStatus pour gérer correctement l'état pending de la Server Action.
+ * La redirection est gérée côté client pour éviter les problèmes avec redirect().
  *
  * @param locale - La locale de l'application
  * @param label - Le texte du bouton (par défaut: "Passer Pro")
@@ -75,41 +76,54 @@ export function ProButton({
   variant = "default",
   className = "",
 }: ProButtonProps) {
-  // Wrapper pour passer la locale à l'action
-  const checkoutWithLocale = async (
-    prevState: CheckoutActionState | null,
-    formData: FormData
-  ) => {
-    formData.set("locale", locale);
-    return redirectToCheckout(prevState, formData);
+  const router = useRouter();
+  const [isPending, setIsPending] = useState(false);
+
+  /**
+   * Gère le clic sur le bouton pour créer la session de checkout
+   */
+  const handleCheckout = async () => {
+    setIsPending(true);
+
+    try {
+      const result = await createCheckoutSession(locale);
+
+      // Si on a une URL, on redirige vers Stripe Checkout
+      if ("url" in result && result.url) {
+        window.location.href = result.url;
+        return;
+      }
+
+      // Gestion des erreurs
+      if ("error" in result) {
+        // Si l'utilisateur n'est pas authentifié, on redirige vers login
+        if (result.error === "not_authenticated") {
+          router.push(`/${locale}/login`);
+          return;
+        }
+
+        // Pour les autres erreurs, on affiche une alerte
+        alert(
+          `Erreur lors de la création de la session de checkout:\n\n${result.error}`
+        );
+      }
+    } catch (error) {
+      console.error("Erreur lors de la création de la session:", error);
+      alert(
+        `Une erreur inattendue s'est produite. Veuillez réessayer plus tard.`
+      );
+    } finally {
+      setIsPending(false);
+    }
   };
 
-  // Utilisation de useActionState pour gérer l'état de l'action
-  const [state, formAction, isPending] = useActionState<
-    CheckoutActionState | null,
-    FormData
-  >(checkoutWithLocale, null);
-
-  // Gestion de la redirection côté client quand l'URL est disponible
-  useEffect(() => {
-    if (state?.checkoutUrl) {
-      window.location.href = state.checkoutUrl;
-    } else if (state?.error) {
-      alert(
-        `Erreur lors de la création de la session de checkout:\n\n${state.error}`
-      );
-    }
-  }, [state]);
-
   return (
-    <form action={formAction}>
-      <input type="hidden" name="locale" value={locale} />
-      <SubmitButton
-        label={label}
-        variant={variant}
-        className={className}
-        isPending={isPending}
-      />
-    </form>
+    <SubmitButton
+      label={label}
+      variant={variant}
+      className={className}
+      isPending={isPending}
+      onClick={handleCheckout}
+    />
   );
 }
