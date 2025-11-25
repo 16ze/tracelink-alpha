@@ -31,8 +31,9 @@ export async function sendWelcomeEmail(email: string, name: string) {
       react: WelcomeEmail({ firstName: name }),
     });
 
-    console.log("✅ Email de bienvenue envoyé:", data.id);
-    return { success: true, id: data.id };
+    const emailId = (data as any)?.id || (data as any)?.data?.id;
+    console.log("✅ Email de bienvenue envoyé:", emailId);
+    return { success: true, id: emailId };
   } catch (error) {
     console.error("❌ Erreur envoi email bienvenue:", error);
     return { success: false, error };
@@ -55,8 +56,9 @@ export async function sendProConfirmationEmail(email: string, name: string) {
       react: ProWelcomeEmail({ firstName: name }),
     });
 
-    console.log("✅ Email Pro envoyé:", data.id);
-    return { success: true, id: data.id };
+    const emailId = (data as any)?.id || (data as any)?.data?.id;
+    console.log("✅ Email Pro envoyé:", emailId);
+    return { success: true, id: emailId };
   } catch (error) {
     console.error("❌ Erreur envoi email Pro:", error);
     return { success: false, error };
@@ -91,8 +93,9 @@ export async function sendCertificateRequestEmail(
       }),
     });
 
-    console.log("✅ Email de demande de certificat envoyé:", data.id);
-    return { success: true, id: data.id };
+    const emailId = (data as any)?.id || (data as any)?.data?.id;
+    console.log("✅ Email de demande de certificat envoyé:", emailId);
+    return { success: true, id: emailId };
   } catch (error) {
     console.error("❌ Erreur envoi email demande certificat:", error);
     return { success: false, error };
