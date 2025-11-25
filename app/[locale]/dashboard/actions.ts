@@ -1764,3 +1764,81 @@ export async function importProducts(products: any[], locale: string = "fr"): Pr
     return { error: "Une erreur inattendue est survenue lors de l'import." };
   }
 }
+
+/**
+ * Type de retour pour les actions de demande de certificat
+ */
+export type CertificateRequestActionState = {
+  error?: string;
+  success?: string;
+};
+
+/**
+ * Action serveur pour demander un certificat à un fournisseur par email
+ * 
+ * @param supplierEmail - Email du fournisseur
+ * @param productId - ID du produit
+ * @param componentId - ID du composant
+ * @param customMessage - Message personnalisé (optionnel)
+ */
+export async function requestCertificateFromSupplier(
+  supplierEmail: string,
+  productId: string,
+  componentId: string,
+  customMessage?: string
+): Promise<CertificateRequestActionState> {
+  const supabase = await createClient();
+
+  // 1. Vérification Authentification
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    return { error: "Vous devez être connecté pour envoyer une demande." };
+  }
+
+  // 2. Validation de l'email
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(supplierEmail.trim())) {
+    return { error: "L'adresse email fournie n'est pas valide." };
+  }
+
+  // 3. Récupération de la marque
+  const brand = await getUserBrand();
+  if (!brand) {
+    return { error: "Marque non trouvée." };
+  }
+
+  // 4. Récupération du produit (vérification de propriété)
+  const product = await getProductById(productId);
+  if (!product) {
+    return { error: "Produit non trouvé ou accès non autorisé." };
+  }
+
+  // 5. Récupération du composant
+  const components = await getProductComponents(productId);
+  const component = components.find(c => c.id === componentId);
+  if (!component) {
+    return { error: "Composant non trouvé." };
+  }
+
+  // 6. Envoi de l'email
+  try {
+    const { sendCertificateRequestEmail } = await import("@/app/actions/email");
+    
+    const result = await sendCertificateRequestEmail(
+      supplierEmail.trim(),
+      brand.name,
+      product.name,
+      component.type,
+      customMessage?.trim()
+    );
+
+    if (!result.success) {
+      return { error: "Erreur lors de l'envoi de l'email. Veuillez réessayer." };
+    }
+
+    return { success: `Demande envoyée avec succès à ${supplierEmail}` };
+  } catch (err) {
+    console.error("Erreur inattendue demande certificat:", err);
+    return { error: "Une erreur inattendue est survenue." };
+  }
+}

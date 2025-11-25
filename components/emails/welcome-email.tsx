@@ -99,3 +99,50 @@ export const ProWelcomeEmail = ({ firstName }: { firstName: string }) => (
   </Html>
 );
 
+export const CertificateRequestEmail = ({ 
+  brandName, 
+  productName, 
+  componentType, 
+  customMessage 
+}: { 
+  brandName: string; 
+  productName: string; 
+  componentType: string;
+  customMessage?: string;
+}) => (
+  <Html lang="fr">
+    <Section style={{ backgroundColor: '#ffffff', fontFamily: 'sans-serif', padding: '20px' }}>
+      <Container style={{ margin: '0 auto', maxWidth: '600px', padding: '20px', border: '1px solid #eaeaea', borderRadius: '10px' }}>
+        <Heading style={{ fontSize: '24px', fontWeight: 'bold', textAlign: 'center', color: '#000' }}>
+          Demande de certificat 📋
+        </Heading>
+        
+        <Text style={{ fontSize: '16px', color: '#333', lineHeight: '24px' }}>
+          Bonjour,
+        </Text>
+        
+        <Text style={{ fontSize: '16px', color: '#333', lineHeight: '24px' }}>
+          La marque <strong>{brandName}</strong> vous demande le certificat GOTS pour le composant <strong>{componentType}</strong> du produit <strong>{productName}</strong>.
+        </Text>
+
+        {customMessage && (
+          <Section style={{ margin: '20px 0', padding: '15px', backgroundColor: '#f9f9f9', borderRadius: '5px', borderLeft: '4px solid #000' }}>
+            <Text style={{ fontSize: '14px', color: '#333', fontStyle: 'italic', margin: 0 }}>
+              "{customMessage}"
+            </Text>
+          </Section>
+        )}
+
+        <Text style={{ fontSize: '16px', color: '#333', lineHeight: '24px', marginTop: '20px' }}>
+          Merci de leur envoyer le document par retour de mail.
+        </Text>
+
+        <Text style={{ fontSize: '14px', color: '#666', lineHeight: '20px', marginTop: '30px', paddingTop: '20px', borderTop: '1px solid #eaeaea' }}>
+          Cordialement,<br />
+          L'équipe TraceLink
+        </Text>
+      </Container>
+    </Section>
+  </Html>
+);
+

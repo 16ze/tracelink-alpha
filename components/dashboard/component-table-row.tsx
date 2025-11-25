@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Eye, Upload, Lock } from "lucide-react";
+import { Eye, Upload, Lock, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { TableCell, TableRow } from "@/components/ui/table";
@@ -10,12 +10,14 @@ import type {
   DatabaseCertificate,
 } from "@/types/supabase";
 import { UploadCertificateDialog } from "./upload-certificate-dialog";
+import { RequestCertificateDialog } from "./request-certificate-dialog";
 
 /**
  * Props pour le composant ComponentTableRow
  */
 interface ComponentTableRowProps {
   component: DatabaseComponent;
+  productId: string;
   formattedDate: string;
   IconComponent: React.ComponentType<{ className?: string }>;
   hasCertificate: boolean;
@@ -31,6 +33,7 @@ interface ComponentTableRowProps {
  */
 export function ComponentTableRow({
   component,
+  productId,
   formattedDate,
   IconComponent,
   hasCertificate,
@@ -59,41 +62,49 @@ export function ComponentTableRow({
         </TableCell>
         <TableCell>{component.origin_country}</TableCell>
         <TableCell>
-          {hasCertificate && certificate ? (
-            <div className="flex items-center gap-2">
-              <Badge variant="default" className="bg-green-600">
-                Vérifié
-              </Badge>
+          <div className="flex items-center gap-2 flex-wrap">
+            {hasCertificate && certificate ? (
+              <>
+                <Badge variant="default" className="bg-green-600">
+                  Vérifié
+                </Badge>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => window.open(certificate.file_url, "_blank")}
+                  className="h-7 px-2"
+                >
+                  <Eye className="h-4 w-4" />
+                </Button>
+              </>
+            ) : isProPlan ? (
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                onClick={() => window.open(certificate.file_url, "_blank")}
-                className="h-7 px-2"
+                onClick={() => setIsUploadDialogOpen(true)}
+                className="gap-2 bg-white"
               >
-                <Eye className="h-4 w-4" />
+                <Upload className="h-4 w-4" />
+                Ajouter une preuve
               </Button>
-            </div>
-          ) : isProPlan ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsUploadDialogOpen(true)}
-              className="gap-2 bg-white"
-            >
-              <Upload className="h-4 w-4" />
-              Ajouter une preuve
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleLockedUpload}
-              className="gap-2 bg-white text-muted-foreground"
-            >
-              <Lock className="h-4 w-4" />
-              Pro uniquement
-            </Button>
-          )}
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLockedUpload}
+                className="gap-2 bg-white text-muted-foreground"
+              >
+                <Lock className="h-4 w-4" />
+                Pro uniquement
+              </Button>
+            )}
+            {/* Bouton pour demander la preuve au fournisseur */}
+            <RequestCertificateDialog
+              componentId={component.id}
+              componentType={component.type}
+              productId={productId}
+            />
+          </div>
         </TableCell>
         <TableCell className="text-right text-muted-foreground text-sm">
           {formattedDate}

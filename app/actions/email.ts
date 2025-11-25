@@ -1,5 +1,5 @@
 import { Resend } from "resend";
-import { WelcomeEmail, ProWelcomeEmail } from "@/components/emails/welcome-email";
+import { WelcomeEmail, ProWelcomeEmail, CertificateRequestEmail } from "@/components/emails/welcome-email";
 
 // Initialisation du client Resend
 // Si la clé n'est pas présente, on loggue un avertissement mais on ne plante pas l'appli
@@ -59,6 +59,42 @@ export async function sendProConfirmationEmail(email: string, name: string) {
     return { success: true, id: data.id };
   } catch (error) {
     console.error("❌ Erreur envoi email Pro:", error);
+    return { success: false, error };
+  }
+}
+
+/**
+ * Envoie un email de demande de certificat à un fournisseur
+ */
+export async function sendCertificateRequestEmail(
+  supplierEmail: string,
+  brandName: string,
+  productName: string,
+  componentType: string,
+  customMessage?: string
+) {
+  if (!resendApiKey) return { success: false, error: "No API Key" };
+
+  console.log(`📧 Envoi de demande de certificat à ${supplierEmail}...`);
+
+  try {
+    const data = await resend.emails.send({
+      from: SENDER_EMAIL,
+      to: supplierEmail,
+      replyTo: process.env.SUPPORT_EMAIL || SENDER_EMAIL, // Permet au fournisseur de répondre directement à la marque
+      subject: `La marque ${brandName} a besoin d'un document`,
+      react: CertificateRequestEmail({ 
+        brandName, 
+        productName, 
+        componentType,
+        customMessage 
+      }),
+    });
+
+    console.log("✅ Email de demande de certificat envoyé:", data.id);
+    return { success: true, id: data.id };
+  } catch (error) {
+    console.error("❌ Erreur envoi email demande certificat:", error);
     return { success: false, error };
   }
 }

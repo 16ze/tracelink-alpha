@@ -201,6 +201,7 @@ export function ProductCompositionTab({
                     <ComponentTableRow
                       key={component.id}
                       component={component}
+                      productId={productId}
                       formattedDate={formattedDate}
                       IconComponent={IconComponent}
                       hasCertificate={!!hasCertificate}
