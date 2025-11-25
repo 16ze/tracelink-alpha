@@ -9,6 +9,7 @@ import type {
 } from "@/types/supabase";
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 
 /**
  * Type de retour pour les actions de marque
@@ -72,9 +73,16 @@ export interface AnalyticsStats {
 /**
  * Récupère la marque de l'utilisateur connecté
  *
+ * ⚠️ CRITIQUE: Cette fonction utilise cookies() pour forcer le mode dynamique
+ * et éviter le cache Next.js. Cela garantit que le statut d'abonnement Stripe
+ * est toujours à jour après un paiement.
+ *
  * @returns La marque de l'utilisateur ou null si elle n'existe pas
  */
 export async function getUserBrand(): Promise<DatabaseBrand | null> {
+  // 🔥 FORCE LE MODE DYNAMIQUE - Empêche Next.js de cacher cette fonction
+  await cookies();
+  
   const supabase = await createClient();
 
   // Récupération de l'utilisateur connecté
@@ -94,8 +102,9 @@ export async function getUserBrand(): Promise<DatabaseBrand | null> {
   try {
     // Récupération de la marque de l'utilisateur
     // ⚠️ CRITIQUE: On force le rafraîchissement pour détecter les changements de statut Stripe
-    const supabaseWithNoCache = await createClient();
-    const { data, error } = await supabaseWithNoCache
+    console.log("🔍 [getUserBrand] Récupération de la marque pour user:", user.id);
+    
+    const { data, error } = await supabase
       .from("brands")
       .select("*")
       .eq("owner_id", user.id)
@@ -104,21 +113,29 @@ export async function getUserBrand(): Promise<DatabaseBrand | null> {
     if (error) {
       // Si aucune marque n'est trouvée (PGRST116 = not found), retourner null
       if (error.code === "PGRST116") {
+        console.log("ℹ️ [getUserBrand] Aucune marque trouvée pour cet utilisateur");
         return null;
       }
-      console.error("Erreur lors de la récupération de la marque:", error);
+      console.error("❌ [getUserBrand] Erreur lors de la récupération de la marque:", error);
       return null;
     }
 
     // maybeSingle() peut retourner null si aucun résultat n'est trouvé
     if (!data) {
+      console.log("ℹ️ [getUserBrand] Aucune marque trouvée (data null)");
       return null;
     }
+
+    console.log("✅ [getUserBrand] Marque récupérée:", {
+      id: (data as any).id,
+      name: (data as any).name,
+      subscription_status: (data as any).subscription_status || "N/A"
+    });
 
     return data as DatabaseBrand;
   } catch (err) {
     console.error(
-      "Erreur inattendue lors de la récupération de la marque:",
+      "❌ [getUserBrand] Erreur inattendue lors de la récupération de la marque:",
       err
     );
     return null;
