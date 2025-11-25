@@ -118,12 +118,12 @@ export function ProButton({
   };
 
   return (
-    <SubmitButton
-      label={label}
-      variant={variant}
-      className={className}
-      isPending={isPending}
+      <SubmitButton
+        label={label}
+        variant={variant}
+        className={className}
+        isPending={isPending}
       onClick={handleCheckout}
-    />
+      />
   );
 }

@@ -202,3 +202,5 @@ Si le problème persiste après ces étapes :
 
 Si tous les points sont ✅ mais le problème persiste, c'est probablement un problème de cache Next.js côté serveur. Dans ce cas, redéploie l'application sur Vercel/ton hébergeur.
 
+
+

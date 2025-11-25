@@ -66,3 +66,5 @@ export async function DynamicHeader({ locale }: DynamicHeaderProps) {
   );
 }
 
+
+
