@@ -1009,13 +1009,27 @@ export async function requestCertificateFromSupplier(
 
   // 6. Récupération de l'email de l'utilisateur
   if (!user.email) {
+    console.error("❌ requestCertificateFromSupplier: Email utilisateur non trouvé");
     return { error: "Email utilisateur non trouvé." };
   }
 
+  console.log("📬 requestCertificateFromSupplier: Préparation envoi email");
+  console.log("📬 Paramètres:", {
+    supplierEmail: supplierEmail.trim(),
+    userEmail: user.email,
+    brandName: brand.name,
+    productName: product.name,
+    componentType: component.type,
+    customMessage: customMessage?.trim()
+  });
+
   // 7. Envoi de l'email avec copie à l'utilisateur
   try {
+    console.log("📬 Import de sendSupplierRequest...");
     const { sendSupplierRequest } = await import("@/app/actions/email");
+    console.log("✅ sendSupplierRequest importé avec succès");
     
+    console.log("📬 Appel de sendSupplierRequest...");
     const result = await sendSupplierRequest(
       supplierEmail.trim(),
       user.email,
@@ -1025,13 +1039,21 @@ export async function requestCertificateFromSupplier(
       customMessage?.trim()
     );
 
+    console.log("📬 Résultat de sendSupplierRequest:", result);
+
     if (!result.success) {
-      return { error: "Erreur lors de l'envoi de l'email. Veuillez réessayer." };
+      console.error("❌ requestCertificateFromSupplier: Échec envoi email", result.error);
+      return { error: result.error || "Erreur lors de l'envoi de l'email. Veuillez réessayer." };
     }
 
+    console.log("✅ requestCertificateFromSupplier: Email envoyé avec succès");
     return { success: `Demande envoyée avec succès à ${supplierEmail}` };
   } catch (err) {
-    console.error("Erreur inattendue demande certificat:", err);
+    console.error("❌ Erreur inattendue demande certificat:");
+    console.error("Type:", err instanceof Error ? err.constructor.name : typeof err);
+    console.error("Message:", err instanceof Error ? err.message : String(err));
+    console.error("Stack:", err instanceof Error ? err.stack : "N/A");
+    console.error("Erreur complète:", JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
     return { error: "Une erreur inattendue est survenue." };
   }
 }
