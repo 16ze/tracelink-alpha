@@ -210,7 +210,7 @@ export function ProductComplianceTab({
                     <SelectTrigger className={!isProPlan ? "bg-muted" : ""}>
                       <SelectValue placeholder="Sélectionnez la température" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-white">
                       <SelectItem value="30_deg">Lavage à 30°C</SelectItem>
                       <SelectItem value="40_deg">Lavage à 40°C</SelectItem>
                       <SelectItem value="60_deg">Lavage à 60°C</SelectItem>
@@ -281,7 +281,7 @@ export function ProductComplianceTab({
                     <SelectTrigger className={!isProPlan ? "bg-muted" : ""}>
                       <SelectValue placeholder="Sélectionnez le mode de séchage" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-white">
                       <SelectItem value="no_dryer">
                         Séchage interdit au sèche-linge
                       </SelectItem>
@@ -323,7 +323,7 @@ export function ProductComplianceTab({
                     <SelectTrigger className={!isProPlan ? "bg-muted" : ""}>
                       <SelectValue placeholder="Sélectionnez la température de repassage" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-white">
                       <SelectItem value="no_iron">
                         Repassage interdit
                       </SelectItem>
