@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Mail, Send, AlertCircle, CheckCircle2 } from "lucide-react";
-import { requestCertificateFromSupplier } from "../../actions";
+import { requestCertificateFromSupplier } from "@/lib/dashboard-actions";
 import { useRouter } from "next/navigation";
 
 interface RequestCertificateDialogProps {

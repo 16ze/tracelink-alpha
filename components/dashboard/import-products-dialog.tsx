@@ -20,7 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Upload, Download, FileText, CheckCircle2, AlertCircle } from "lucide-react";
-import { importProducts } from "../actions";
+import { importProducts } from "@/lib/dashboard-actions";
 import { useRouter } from "next/navigation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
