@@ -80,12 +80,16 @@ export default async function DashboardPage({
 
     isPaymentSuccess = checkoutParam === "success" || successParam === "true";
 
-    // Force le rafraîchissement des données si le paiement vient d'être effectué
+    // 🔄 CRITIQUE: Force le rafraîchissement du cache après paiement réussi
+    // Cela permet de récupérer le nouveau statut 'active' depuis Supabase
+    // après que le webhook Stripe ait mis à jour la base de données
     if (isPaymentSuccess) {
+      console.log("🔄 [DASHBOARD] Paiement réussi détecté, revalidation du cache...");
       try {
-        revalidatePath(`/${locale}/dashboard`);
+        revalidatePath(`/${locale}/dashboard`, "page");
+        console.log("✅ [DASHBOARD] Cache revalidé avec succès");
       } catch (error) {
-        console.error("❌ Erreur lors de la revalidation du cache:", error);
+        console.error("❌ [DASHBOARD] Erreur lors de la revalidation du cache:", error);
         // On continue même si la revalidation échoue
       }
     }

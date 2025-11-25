@@ -53,27 +53,63 @@ export async function POST(req: Request) {
     if (event.type === "checkout.session.completed") {
       console.log("💰 [WEBHOOK] Événement checkout.session.completed détecté");
       const session = event.data.object as Stripe.Checkout.Session;
+      
+      // Log complet de la session pour debug
+      console.log("💰 [WEBHOOK] Session complète:", JSON.stringify(session, null, 2));
+      console.log("💰 [WEBHOOK] Métadonnées:", JSON.stringify(session.metadata, null, 2));
+      
       const brandId = session.metadata?.brand_id;
-      console.log("💰 [WEBHOOK] Brand ID extrait:", brandId);
+      console.log("🔍 [WEBHOOK] Brand ID extrait des métadonnées:", brandId);
 
       if (brandId) {
-        console.log("💰 [WEBHOOK] Mise à jour de la base de données pour brand_id:", brandId);
-        const { error } = await supabaseAdmin
+        // Vérification que la marque existe avant mise à jour
+        console.log("🔍 [WEBHOOK] Recherche de la marque dans Supabase avec ID:", brandId);
+        const { data: existingBrand, error: fetchError } = await supabaseAdmin
+          .from("brands")
+          .select("id, name, subscription_status")
+          .eq("id", brandId)
+          .single();
+
+        if (fetchError) {
+          console.error("❌ [WEBHOOK] Erreur lors de la recherche de la marque:", fetchError);
+          console.error("❌ [WEBHOOK] Code d'erreur:", fetchError.code);
+          console.error("❌ [WEBHOOK] Message:", fetchError.message);
+        } else {
+          console.log("✅ [WEBHOOK] Marque trouvée:", JSON.stringify(existingBrand, null, 2));
+          console.log("🔄 [WEBHOOK] Statut actuel:", existingBrand.subscription_status);
+        }
+
+        // Mise à jour du statut
+        console.log("🔄 [WEBHOOK] Tentative de mise à jour pour brand_id:", brandId);
+        console.log("🔄 [WEBHOOK] Données à mettre à jour:", {
+          subscription_status: "active",
+          stripe_customer_id: session.customer,
+          stripe_subscription_id: session.subscription,
+        });
+
+        const { data: updateResult, error: updateError } = await supabaseAdmin
           .from("brands")
           .update({
             subscription_status: "active",
             stripe_customer_id: session.customer as string,
             stripe_subscription_id: session.subscription as string,
           })
-          .eq("id", brandId);
+          .eq("id", brandId)
+          .select();
 
-        if (error) {
-          console.error("❌ [WEBHOOK] Erreur lors de la mise à jour Supabase:", error);
+        if (updateError) {
+          console.error("❌ [WEBHOOK] Erreur lors de la mise à jour Supabase:", updateError);
+          console.error("❌ [WEBHOOK] Code d'erreur:", updateError.code);
+          console.error("❌ [WEBHOOK] Message:", updateError.message);
+          console.error("❌ [WEBHOOK] Détails:", JSON.stringify(updateError, null, 2));
         } else {
-          console.log("✅ [WEBHOOK] Base de données mise à jour avec succès pour brand_id:", brandId);
+          console.log("✅ [WEBHOOK] Mise à jour réussie!");
+          console.log("✅ [WEBHOOK] Résultat de la mise à jour:", JSON.stringify(updateResult, null, 2));
+          console.log("✅ [WEBHOOK] Nouveau statut: active");
         }
       } else {
         console.warn("⚠️ [WEBHOOK] Aucun brand_id trouvé dans les métadonnées de la session");
+        console.warn("⚠️ [WEBHOOK] Métadonnées complètes:", JSON.stringify(session.metadata, null, 2));
       }
     } else {
       console.log("ℹ️ [WEBHOOK] Événement ignoré (type:", event.type, ")");

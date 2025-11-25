@@ -93,8 +93,9 @@ export async function getUserBrand(): Promise<DatabaseBrand | null> {
 
   try {
     // Récupération de la marque de l'utilisateur
-    // Utilisation de no-store pour forcer le rafraîchissement des données
-    const { data, error } = await supabase
+    // ⚠️ CRITIQUE: On force le rafraîchissement pour détecter les changements de statut Stripe
+    const supabaseWithNoCache = await createClient();
+    const { data, error } = await supabaseWithNoCache
       .from("brands")
       .select("*")
       .eq("owner_id", user.id)
