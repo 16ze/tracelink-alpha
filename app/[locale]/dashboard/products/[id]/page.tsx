@@ -22,6 +22,7 @@ import {
 import type { DatabaseProduct, DatabaseComponent } from "@/types/supabase";
 import { ProductGeneralTab } from "@/components/dashboard/product-general-tab";
 import { ProductCompositionTab } from "@/components/dashboard/product-composition-tab";
+import { ProductComplianceTab } from "@/components/dashboard/product-compliance-tab";
 import { ProductQRButton } from "@/components/dashboard/product-qr-button";
 
 /**
@@ -200,6 +201,12 @@ export default async function ProductDetailPage({
                   </Badge>
                 )}
               </TabsTrigger>
+              <TabsTrigger
+                value="compliance"
+                className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
+              >
+                Entretien & Loi AGEC
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -214,6 +221,15 @@ export default async function ProductDetailPage({
               productId={product.id}
               components={componentsWithCertificates}
               isProPlan={isProPlan}
+            />
+          </TabsContent>
+
+          {/* Onglet Entretien & Loi AGEC */}
+          <TabsContent value="compliance" className="mt-6">
+            <ProductComplianceTab
+              product={product}
+              isProPlan={isProPlan}
+              locale={locale}
             />
           </TabsContent>
         </Tabs>

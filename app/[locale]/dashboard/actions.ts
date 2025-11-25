@@ -47,6 +47,14 @@ export type CertificateActionState = {
 };
 
 /**
+ * Type de retour pour les actions de compliance
+ */
+export type ComplianceActionState = {
+  error?: string;
+  success?: string;
+};
+
+/**
  * Récupère la marque de l'utilisateur connecté
  *
  * @returns La marque de l'utilisateur ou null si elle n'existe pas
@@ -981,6 +989,149 @@ export async function uploadCertificate(
     };
   } catch (err) {
     console.error("Erreur inattendue lors de l'upload du certificat:", err);
+    return {
+      error: "Une erreur est survenue. Veuillez réessayer plus tard.",
+    };
+  }
+}
+
+/**
+ * Action serveur pour mettre à jour les données de compliance (Entretien & Loi AGEC) d'un produit
+ *
+ * @param prevState - État précédent de l'action (pour useActionState)
+ * @param formData - Données du formulaire contenant product_id et les champs de compliance
+ * @returns État de l'action avec error ou success
+ */
+export async function updateProductCompliance(
+  prevState: ComplianceActionState | null,
+  formData: FormData
+): Promise<ComplianceActionState> {
+  const supabase = await createClient();
+
+  // Récupération de l'utilisateur connecté
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return { error: "Vous devez être connecté pour modifier les données de compliance" };
+  }
+
+  // Récupération de la marque pour vérifier le statut d'abonnement
+  const brand = await getUserBrand();
+  if (!brand) {
+    return {
+      error: "Marque non trouvée",
+    };
+  }
+
+  // Vérification du plan Pro
+  // @ts-ignore - Les types Supabase ne reconnaissent pas encore les colonnes Stripe
+  const subscriptionStatus = (brand as any)?.subscription_status;
+  const isProPlan = subscriptionStatus === "active";
+
+  if (!isProPlan) {
+    return {
+      error: "La gestion des données de compliance est réservée aux membres Pro.",
+    };
+  }
+
+  // Récupération de l'ID du produit
+  const productId = formData.get("product_id") as string;
+  if (!productId) {
+    return { error: "ID du produit manquant" };
+  }
+
+  // Vérification que le produit appartient à l'utilisateur
+  const product = await getProductById(productId);
+  if (!product) {
+    return {
+      error: "Produit non trouvé ou vous n'avez pas accès à ce produit",
+    };
+  }
+
+  // Récupération des données du formulaire
+  const compositionText = formData.get("composition_text") as string;
+  const careWash = formData.get("care_wash") as string;
+  const careBleach = formData.get("care_bleach") === "true";
+  const careDry = formData.get("care_dry") as string;
+  const careIron = formData.get("care_iron") as string;
+  const recyclability = formData.get("recyclability") === "true";
+  const releasedMicroplastics = formData.get("released_microplastics") === "true";
+
+  // Validation des valeurs de care_wash
+  const validCareWash = ["30_deg", "40_deg", "60_deg", "hand_wash", "no_wash"];
+  if (careWash && careWash !== "" && !validCareWash.includes(careWash)) {
+    return { error: "Valeur de lavage invalide" };
+  }
+
+  // Validation des valeurs de care_dry
+  const validCareDry = ["no_dryer", "tumble_low", "tumble_medium", "tumble_high", "line_dry", "flat_dry"];
+  if (careDry && careDry !== "" && !validCareDry.includes(careDry)) {
+    return { error: "Valeur de séchage invalide" };
+  }
+
+  // Validation des valeurs de care_iron
+  const validCareIron = ["no_iron", "low", "medium", "high"];
+  if (careIron && careIron !== "" && !validCareIron.includes(careIron)) {
+    return { error: "Valeur de repassage invalide" };
+  }
+
+  try {
+    // Mise à jour du produit avec les données de compliance
+    // @ts-ignore - Les types Supabase ne reconnaissent pas encore les colonnes compliance
+    const updateData: any = {};
+
+    if (compositionText !== null && compositionText !== undefined) {
+      updateData.composition_text = compositionText.trim() || null;
+    }
+    if (careWash && careWash !== "") {
+      updateData.care_wash = careWash;
+    } else {
+      updateData.care_wash = null;
+    }
+    updateData.care_bleach = careBleach;
+    if (careDry && careDry !== "") {
+      updateData.care_dry = careDry;
+    } else {
+      updateData.care_dry = null;
+    }
+    if (careIron && careIron !== "") {
+      updateData.care_iron = careIron;
+    } else {
+      updateData.care_iron = null;
+    }
+    updateData.recyclability = recyclability;
+    updateData.released_microplastics = releasedMicroplastics;
+
+    const { data, error } = await supabase
+      .from("products")
+      .update(updateData)
+      .eq("id", productId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Erreur lors de la mise à jour du produit:", error);
+      return {
+        error: error.message || "Erreur lors de la mise à jour des données de compliance",
+      };
+    }
+
+    if (!data) {
+      return { error: "Erreur inattendue lors de la mise à jour" };
+    }
+
+    // Révalidation du cache
+    revalidatePath(`/dashboard/products/${productId}`, "layout");
+    revalidatePath(`/p/${productId}`, "layout");
+    
+    return {
+      success: "Données de compliance mises à jour avec succès !",
+    };
+  } catch (err) {
+    console.error("Erreur inattendue lors de la mise à jour:", err);
     return {
       error: "Une erreur est survenue. Veuillez réessayer plus tard.",
     };

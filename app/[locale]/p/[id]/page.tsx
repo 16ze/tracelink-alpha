@@ -260,6 +260,146 @@ export default async function ProductPassportPage({
                 </div>
               )}
 
+              {/* Entretien & Impact */}
+              {(() => {
+                // @ts-ignore - Les types Supabase ne reconnaissent pas encore les colonnes compliance
+                const compositionText = (product as any)?.composition_text;
+                // @ts-ignore
+                const careWash = (product as any)?.care_wash;
+                // @ts-ignore
+                const careBleach = (product as any)?.care_bleach;
+                // @ts-ignore
+                const careDry = (product as any)?.care_dry;
+                // @ts-ignore
+                const careIron = (product as any)?.care_iron;
+                // @ts-ignore
+                const recyclability = (product as any)?.recyclability;
+                // @ts-ignore
+                const releasedMicroplastics = (product as any)?.released_microplastics;
+
+                // Afficher la section seulement si au moins une donnée existe
+                const hasComplianceData = 
+                  compositionText ||
+                  careWash ||
+                  careBleach !== undefined ||
+                  careDry ||
+                  careIron ||
+                  recyclability !== undefined ||
+                  releasedMicroplastics !== undefined;
+
+                if (!hasComplianceData) return null;
+
+                // Fonction pour obtenir le label de lavage
+                const getWashLabel = (value: string | null | undefined) => {
+                  if (!value) return null;
+                  const labels: Record<string, string> = {
+                    "30_deg": "30°C",
+                    "40_deg": "40°C",
+                    "60_deg": "60°C",
+                    "hand_wash": "Lavage main",
+                    "no_wash": "Ne pas laver",
+                  };
+                  return labels[value] || value;
+                };
+
+                // Fonction pour obtenir le label de séchage
+                const getDryLabel = (value: string | null | undefined) => {
+                  if (!value) return null;
+                  const labels: Record<string, string> = {
+                    "no_dryer": "Pas de sèche-linge",
+                    "tumble_low": "Sèche-linge basse temp.",
+                    "tumble_medium": "Sèche-linge moyenne temp.",
+                    "tumble_high": "Sèche-linge haute temp.",
+                    "line_dry": "Séchage à l'air libre",
+                    "flat_dry": "Séchage à plat",
+                  };
+                  return labels[value] || value;
+                };
+
+                // Fonction pour obtenir le label de repassage
+                const getIronLabel = (value: string | null | undefined) => {
+                  if (!value) return null;
+                  const labels: Record<string, string> = {
+                    "no_iron": "Pas de repassage",
+                    "low": "Basse température (max 110°C)",
+                    "medium": "Moyenne température (max 150°C)",
+                    "high": "Haute température (max 200°C)",
+                  };
+                  return labels[value] || value;
+                };
+
+                return (
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                      Entretien & Impact
+                    </h3>
+
+                    {/* Composition */}
+                    {compositionText && (
+                      <div className="p-4 rounded-lg border bg-card">
+                        <p className="text-base font-medium">{compositionText}</p>
+                      </div>
+                    )}
+
+                    {/* Instructions d'entretien */}
+                    {(careWash || careBleach !== undefined || careDry || careIron) && (
+                      <div className="p-4 rounded-lg border bg-card space-y-3">
+                        <h4 className="text-sm font-semibold mb-3">Instructions d&apos;entretien</h4>
+                        <div className="flex flex-wrap gap-4">
+                          {careWash && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-2xl">🧺</span>
+                              <span className="text-sm">{getWashLabel(careWash)}</span>
+                            </div>
+                          )}
+                          {careBleach !== undefined && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-2xl">🧼</span>
+                              <span className="text-sm">
+                                {careBleach ? "Javel autorisée" : "Pas de javel"}
+                              </span>
+                            </div>
+                          )}
+                          {careDry && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-2xl">☀️</span>
+                              <span className="text-sm">{getDryLabel(careDry)}</span>
+                            </div>
+                          )}
+                          {careIron && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-2xl">🔥</span>
+                              <span className="text-sm">{getIronLabel(careIron)}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Impact environnemental */}
+                    {(recyclability !== undefined || releasedMicroplastics !== undefined) && (
+                      <div className="p-4 rounded-lg border bg-card space-y-2">
+                        <h4 className="text-sm font-semibold mb-3">Impact environnemental</h4>
+                        {recyclability && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-2xl">♻️</span>
+                            <span className="text-sm font-medium">Produit recyclable</span>
+                          </div>
+                        )}
+                        {releasedMicroplastics && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-2xl">⚠️</span>
+                            <span className="text-sm">
+                              Rejette des microplastiques lors du lavage
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
               {/* Date Création */}
               <div className="space-y-2">
                 <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
