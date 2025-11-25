@@ -1,5 +1,6 @@
 import { ProButton } from "@/components/landing/pro-button";
 import { DynamicHeader } from "@/components/landing/dynamic-header";
+import { Footer } from "@/components/layout/footer";
 import { Logo } from "@/components/logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -376,87 +377,8 @@ export default async function LandingPage({
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t py-12">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <Logo size="sm" />
-              <p className="text-sm text-muted-foreground mt-4">
-                Passeport Numérique Produit pour l&apos;industrie textile
-              </p>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Produit</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>
-                  <Link
-                    href="#demo"
-                    className="hover:text-foreground transition-colors"
-                  >
-                    Fonctionnalités
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="#pricing"
-                    className="hover:text-foreground transition-colors"
-                  >
-                    Tarifs
-                  </Link>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Légal</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>
-                  <Link
-                    href="#"
-                    className="hover:text-foreground transition-colors"
-                  >
-                    Mentions légales
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="#"
-                    className="hover:text-foreground transition-colors"
-                  >
-                    Politique de confidentialité
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="#"
-                    className="hover:text-foreground transition-colors"
-                  >
-                    CGU
-                  </Link>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Contact</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>
-                  <Link
-                    href="mailto:contact@tracelink.fr"
-                    className="hover:text-foreground transition-colors"
-                  >
-                    contact@tracelink.fr
-                  </Link>
-                </li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t pt-8 text-center text-sm text-muted-foreground">
-            <p>
-              &copy; {new Date().getFullYear()} TraceLink. Tous droits réservés.
-            </p>
-          </div>
-        </div>
-      </footer>
+      {/* Footer Global */}
+      <Footer locale={locale} />
     </div>
   );
 }
