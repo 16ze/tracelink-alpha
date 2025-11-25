@@ -70,16 +70,29 @@ export function RequestCertificateDialog({
   }, [open, customMessage, componentType, productName]);
 
   const handleSubmit = async (e: React.FormEvent) => {
+    console.log("🖱️ Clic sur le bouton envoyer");
     e.preventDefault();
+    console.log("✅ preventDefault() appelé - Formulaire non soumis de manière classique");
+    
     setError(null);
     setSuccess(null);
 
+    console.log("📝 Validation des données du formulaire...");
+    console.log("📧 Email fournisseur:", supplierEmail);
+    console.log("📄 Message:", customMessage);
+    console.log("🆔 Product ID:", productId);
+    console.log("🔧 Component ID:", componentId);
+
     if (!supplierEmail.trim()) {
+      console.error("❌ Validation échouée: Email fournisseur manquant");
       setError("L'adresse email est requise.");
       return;
     }
 
+    console.log("✅ Validation OK - Démarrage de la transition...");
+    
     startTransition(async () => {
+      console.log("🔄 Transition démarrée - Appel de l'action serveur requestCertificateFromSupplier...");
       try {
         const result = await requestCertificateFromSupplier(
           supplierEmail.trim(),
@@ -88,12 +101,17 @@ export function RequestCertificateDialog({
           customMessage.trim() || undefined
         );
 
+        console.log("📥 Résultat reçu de requestCertificateFromSupplier:", result);
+
         if (result.error) {
+          console.error("❌ Erreur retournée:", result.error);
           setError(result.error);
         } else {
+          console.log("✅ Succès! Message:", result.success);
           setSuccess(result.success || "Demande envoyée avec succès !");
           // Fermer la modale après 2 secondes
           setTimeout(() => {
+            console.log("🔒 Fermeture de la modale dans 2 secondes...");
             setOpen(false);
             setSupplierEmail("");
             setCustomMessage("");
@@ -103,15 +121,21 @@ export function RequestCertificateDialog({
           }, 2000);
         }
       } catch (err) {
+        console.error("❌ Exception capturée dans handleSubmit:");
+        console.error("Type:", err instanceof Error ? err.constructor.name : typeof err);
+        console.error("Message:", err instanceof Error ? err.message : String(err));
+        console.error("Stack:", err instanceof Error ? err.stack : "N/A");
         setError("Une erreur inattendue est survenue.");
       }
     });
   };
 
   const handleOpenChange = (isOpen: boolean) => {
+    console.log(isOpen ? "📂 Dialog ouverte" : "📁 Dialog fermée");
     setOpen(isOpen);
     if (!isOpen) {
       // Reset form when closing
+      console.log("🔄 Réinitialisation du formulaire...");
       setSupplierEmail("");
       setCustomMessage("");
       setError(null);
@@ -205,7 +229,12 @@ export function RequestCertificateDialog({
             >
               Annuler
             </Button>
-            <Button type="submit" disabled={isPending} className="gap-2">
+            <Button 
+              type="submit" 
+              disabled={isPending} 
+              className="gap-2"
+              onClick={() => console.log("🖱️ Bouton submit cliqué (avant onSubmit du form)")}
+            >
               <Send className="h-4 w-4" />
               {isPending ? "Envoi en cours..." : "Envoyer la demande"}
             </Button>
