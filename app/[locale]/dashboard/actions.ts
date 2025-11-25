@@ -1370,3 +1370,284 @@ export async function getAnalyticsStats(): Promise<AnalyticsStats> {
     };
   }
 }
+
+/**
+ * Action serveur pour mettre à jour un produit
+ *
+ * @param prevState - État précédent de l'action (pour useActionState)
+ * @param formData - Données du formulaire contenant productId, name, sku, description et photo (optionnelle)
+ * @param locale - Locale pour la redirection
+ * @returns État de l'action avec error ou success
+ */
+export async function updateProduct(
+  prevState: ProductActionState | null,
+  formData: FormData,
+  locale?: string
+): Promise<ProductActionState> {
+  const supabase = await createClient();
+
+  // Récupération de l'utilisateur connecté
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return { error: "Vous devez être connecté pour modifier un produit" };
+  }
+
+  // Récupération des données du formulaire
+  const productId = formData.get("productId") as string;
+  const name = formData.get("name") as string;
+  const sku = formData.get("sku") as string;
+  const description = formData.get("description") as string;
+  const photo = formData.get("photo") as File | null;
+
+  // Validation des champs requis
+  if (!productId) {
+    return { error: "ID du produit manquant" };
+  }
+
+  if (!name || name.trim().length === 0) {
+    return { error: "Le nom du produit est requis" };
+  }
+
+  if (!sku || sku.trim().length === 0) {
+    return { error: "Le SKU/Référence est requis" };
+  }
+
+  // Validation de la longueur des champs
+  if (name.trim().length > 255) {
+    return { error: "Le nom du produit ne peut pas dépasser 255 caractères" };
+  }
+
+  if (sku.trim().length > 100) {
+    return { error: "Le SKU ne peut pas dépasser 100 caractères" };
+  }
+
+  // Vérification que le produit appartient à l'utilisateur
+  const existingProduct = await getProductById(productId);
+  if (!existingProduct) {
+    return {
+      error: "Produit non trouvé ou vous n'avez pas accès à ce produit",
+    };
+  }
+
+  try {
+    let photoUrl = existingProduct.photo_url;
+    let oldFilePath: string | null = null;
+
+    // Si une nouvelle photo est fournie, l'uploader
+    if (photo && photo.size > 0) {
+      // Validation de la taille du fichier (max 10MB)
+      const maxSize = 10 * 1024 * 1024; // 10MB en bytes
+      if (photo.size > maxSize) {
+        return {
+          error: "La taille de l'image ne doit pas dépasser 10MB",
+        };
+      }
+
+      // Validation du type de fichier (images uniquement)
+      const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+      if (!allowedTypes.includes(photo.type)) {
+        return {
+          error: "Le fichier doit être une image (JPEG, PNG ou WebP)",
+        };
+      }
+
+      // Extraire le chemin de l'ancienne image pour la supprimer après
+      if (existingProduct.photo_url) {
+        // L'URL Supabase Storage suit le format:
+        // https://<project>.supabase.co/storage/v1/object/public/product-images/<path>
+        const urlParts = existingProduct.photo_url.split("/product-images/");
+        if (urlParts.length === 2) {
+          oldFilePath = urlParts[1];
+        }
+      }
+
+      // Génération d'un nom de fichier unique
+      const timestamp = Date.now();
+      const sanitizedOriginalName = photo.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+      const uniqueFileName = `${timestamp}-${sanitizedOriginalName}`;
+      const filePath = `${user.id}/${uniqueFileName}`;
+
+      // Conversion du fichier en ArrayBuffer pour l'upload
+      const arrayBuffer = await photo.arrayBuffer();
+      const fileBuffer = new Uint8Array(arrayBuffer);
+
+      // Upload de la nouvelle image vers Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from("product-images")
+        .upload(filePath, fileBuffer, {
+          contentType: photo.type,
+          upsert: false,
+        });
+
+      if (uploadError) {
+        console.error("Erreur lors de l'upload de l'image:", uploadError);
+        return {
+          error:
+            uploadError.message ||
+            "Erreur lors de l'upload de l'image. Veuillez réessayer.",
+        };
+      }
+
+      // Récupération de l'URL publique de la nouvelle image
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("product-images").getPublicUrl(filePath);
+      photoUrl = publicUrl;
+
+      // Suppression de l'ancienne image (en arrière-plan, ne bloque pas si ça échoue)
+      if (oldFilePath) {
+        supabase.storage
+          .from("product-images")
+          .remove([oldFilePath])
+          .catch((err) => {
+            console.warn(
+              "Erreur lors de la suppression de l'ancienne image:",
+              err
+            );
+          });
+      }
+    }
+
+    // Mise à jour du produit dans la table products
+    const updateData: Database["public"]["Tables"]["products"]["Update"] = {
+      name: name.trim(),
+      sku: sku.trim(),
+      description: description?.trim() || null,
+      ...(photoUrl ? { photo_url: photoUrl } : {}),
+    };
+
+    const { error: updateError } = await (supabase
+      .from("products") as any)
+      .update(updateData)
+      .eq("id", productId);
+
+    if (updateError) {
+      // Si la mise à jour échoue et qu'on a uploadé une nouvelle image, la supprimer
+      if (photo && photo.size > 0 && photoUrl) {
+        const urlParts = photoUrl.split("/product-images/");
+        if (urlParts.length === 2) {
+          await supabase.storage
+            .from("product-images")
+            .remove([urlParts[1]])
+            .catch(() => {
+              // Ignorer l'erreur de suppression
+            });
+        }
+      }
+
+      // Gestion des erreurs spécifiques
+      if (updateError.code === "23505") {
+        // Violation de contrainte unique (SKU déjà utilisé)
+        return {
+          error: "Ce SKU est déjà utilisé. Veuillez en choisir un autre.",
+        };
+      }
+
+      console.error("Erreur lors de la mise à jour du produit:", updateError);
+      return {
+        error:
+          updateError.message || "Erreur lors de la mise à jour du produit",
+      };
+    }
+
+    // Révalidation du cache
+    const currentLocale = locale || "fr";
+    revalidatePath(`/${currentLocale}/dashboard`, "layout");
+    revalidatePath(`/${currentLocale}/dashboard/products/${productId}`, "page");
+    revalidatePath(`/${currentLocale}/p/${productId}`, "page");
+
+    return {
+      success: "Produit mis à jour avec succès !",
+    };
+  } catch (err) {
+    console.error("Erreur inattendue lors de la mise à jour du produit:", err);
+    return {
+      error: "Une erreur est survenue. Veuillez réessayer plus tard.",
+    };
+  }
+}
+
+/**
+ * Action serveur pour supprimer un produit
+ *
+ * @param productId - ID du produit à supprimer
+ * @param locale - Locale pour la redirection
+ * @returns État de l'action avec error ou redirect
+ */
+export async function deleteProduct(
+  productId: string,
+  locale: string = "fr"
+): Promise<ProductActionState> {
+  const supabase = await createClient();
+
+  // Récupération de l'utilisateur connecté
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return { error: "Vous devez être connecté pour supprimer un produit" };
+  }
+
+  // Vérification que le produit appartient à l'utilisateur
+  const product = await getProductById(productId);
+  if (!product) {
+    return {
+      error: "Produit non trouvé ou vous n'avez pas accès à ce produit",
+    };
+  }
+
+  try {
+    // Suppression de l'image du produit dans le storage (si elle existe)
+    if (product.photo_url) {
+      // Extraire le chemin de l'image depuis l'URL
+      const urlParts = product.photo_url.split("/product-images/");
+      if (urlParts.length === 2) {
+        const filePath = urlParts[1];
+        // Suppression en arrière-plan (ne bloque pas si ça échoue)
+        await supabase.storage
+          .from("product-images")
+          .remove([filePath])
+          .catch((err) => {
+            console.warn(
+              "Erreur lors de la suppression de l'image du produit:",
+              err
+            );
+          });
+      }
+    }
+
+    // Suppression du produit (les composants et certificats seront supprimés en cascade)
+    const { error: deleteError } = await supabase
+      .from("products")
+      .delete()
+      .eq("id", productId);
+
+    if (deleteError) {
+      console.error("Erreur lors de la suppression du produit:", deleteError);
+      return {
+        error:
+          deleteError.message || "Erreur lors de la suppression du produit",
+      };
+    }
+
+    // Révalidation du cache
+    revalidatePath(`/${locale}/dashboard`, "layout");
+    revalidatePath(`/${locale}/dashboard/products`, "layout");
+
+    return {
+      success: "Produit supprimé avec succès",
+      redirect: `/${locale}/dashboard`,
+    };
+  } catch (err) {
+    console.error("Erreur inattendue lors de la suppression du produit:", err);
+    return {
+      error: "Une erreur est survenue. Veuillez réessayer plus tard.",
+    };
+  }
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, use, useEffect } from "react";
+import { useActionState, use, useEffect, useState, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -22,7 +22,8 @@ import {
   AlertTitle,
 } from "@/components/ui/alert";
 import { createProduct, type ProductActionState } from "../../actions";
-import { CheckCircle2, AlertCircle, Package, ArrowLeft, Upload } from "lucide-react";
+import { generateProductDescription } from "@/app/actions/ai";
+import { CheckCircle2, AlertCircle, Package, ArrowLeft, Upload, Sparkles, Loader2 } from "lucide-react";
 
 /**
  * Composant pour le bouton de soumission avec état de chargement
@@ -51,6 +52,14 @@ export default function NewProductPage({
   const locale = resolvedParams.locale;
   const router = useRouter();
 
+  // Référence pour le champ description
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
+  // État pour la génération par IA
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+
   // Créer un wrapper pour passer la locale
   const createProductWithLocale = async (
     prevState: ProductActionState | null,
@@ -69,6 +78,52 @@ export default function NewProductPage({
       router.push(state.redirect);
     }
   }, [state?.redirect, router]);
+
+  // Fonction pour générer la description par IA
+  const handleGenerateDescription = async () => {
+    // Réinitialiser l'erreur
+    setAiError(null);
+
+    // Récupérer le nom du produit
+    const productName = nameInputRef.current?.value?.trim() || "";
+
+    // Vérifier que le nom est rempli
+    if (!productName) {
+      setAiError("Veuillez d'abord entrer un nom de produit");
+      return;
+    }
+
+    // Démarrer la génération
+    setIsGenerating(true);
+
+    try {
+      // Préparer les caractéristiques (on peut utiliser le SKU ou demander des mots-clés)
+      // Pour l'instant, on utilise juste le nom du produit
+      const features = `Produit textile éco-responsable : ${productName}`;
+
+      // Appeler l'action serveur
+      const generatedDescription = await generateProductDescription(
+        productName,
+        features,
+        locale
+      );
+
+      if (generatedDescription && descriptionRef.current) {
+        // Remplir le champ description
+        descriptionRef.current.value = generatedDescription;
+        // Déclencher un événement pour que React détecte le changement
+        const event = new Event("input", { bubbles: true });
+        descriptionRef.current.dispatchEvent(event);
+      } else {
+        setAiError("Impossible de générer la description. Veuillez réessayer.");
+      }
+    } catch (error) {
+      console.error("Erreur lors de la génération:", error);
+      setAiError("Une erreur est survenue lors de la génération. Veuillez réessayer.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   return (
     <main className="min-h-screen bg-muted/40 p-8">
@@ -129,6 +184,7 @@ export default function NewProductPage({
                   Nom du produit <span className="text-destructive">*</span>
                 </Label>
                 <Input
+                  ref={nameInputRef}
                   id="name"
                   name="name"
                   type="text"
@@ -165,8 +221,39 @@ export default function NewProductPage({
 
               {/* Champ Description */}
               <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="description">Description</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleGenerateDescription}
+                    disabled={isGenerating || !!state?.success}
+                    className="gap-2"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Génération...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4" />
+                        Générer avec l&apos;IA
+                      </>
+                    )}
+                  </Button>
+                </div>
+                {aiError && (
+                  <Alert variant="destructive" className="mt-2">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription className="text-sm">
+                      {aiError}
+                    </AlertDescription>
+                  </Alert>
+                )}
                 <Textarea
+                  ref={descriptionRef}
                   id="description"
                   name="description"
                   placeholder="Décrivez votre produit en quelques mots..."

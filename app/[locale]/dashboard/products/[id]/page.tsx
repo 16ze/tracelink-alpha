@@ -214,7 +214,7 @@ export default async function ProductDetailPage({
 
           {/* Onglet Général */}
           <TabsContent value="general" className="mt-6">
-            <ProductGeneralTab product={product} />
+            <ProductGeneralTab product={product} locale={locale} />
           </TabsContent>
 
           {/* Onglet Composition & Traçabilité */}
