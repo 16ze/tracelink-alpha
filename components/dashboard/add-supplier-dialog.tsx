@@ -116,7 +116,7 @@ export function AddSupplierDialog({ locale }: AddSupplierDialogProps) {
               <SelectTrigger id="country">
                 <SelectValue placeholder="Sélectionnez un pays" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white">
                 <SelectItem value="France">France</SelectItem>
                 <SelectItem value="Italie">Italie</SelectItem>
                 <SelectItem value="Portugal">Portugal</SelectItem>
@@ -190,6 +190,7 @@ export function AddSupplierDialog({ locale }: AddSupplierDialogProps) {
     </Dialog>
   );
 }
+
 
 
 
