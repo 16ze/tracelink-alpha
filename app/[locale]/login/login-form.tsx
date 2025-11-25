@@ -79,7 +79,7 @@ export function LoginForm({ locale }: { locale: string }) {
   }, [signupState?.redirect, router]);
 
   return (
-    <Tabs defaultValue="login" className="w-[400px]">
+    <Tabs defaultValue="login" className="w-full">
       <TabsList className="grid w-full grid-cols-2">
         <TabsTrigger value="login">Connexion</TabsTrigger>
         <TabsTrigger value="signup">Inscription</TabsTrigger>

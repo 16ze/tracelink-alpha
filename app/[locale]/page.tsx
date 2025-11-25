@@ -1,4 +1,5 @@
 import { ProButton } from "@/components/landing/pro-button";
+import { DynamicHeader } from "@/components/landing/dynamic-header";
 import { Logo } from "@/components/logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -42,22 +43,8 @@ export default async function LandingPage({
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Navbar */}
-      <nav className="border-b bg-card/50 backdrop-blur supports-backdrop-filter:bg-card/50 sticky top-0 z-50">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <Logo href={`/${locale}`} size="sm" />
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" asChild>
-                <Link href={`/${locale}/login`}>Se connecter</Link>
-              </Button>
-              <Button asChild>
-                <Link href={`/${locale}/login`}>Commencer</Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </nav>
+      {/* Navbar Dynamique */}
+      <DynamicHeader locale={locale} />
 
       {/* Hero Section */}
       <section className="relative overflow-hidden border-b">
