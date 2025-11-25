@@ -1,16 +1,6 @@
 import { Resend } from "resend";
 import { WelcomeEmail, ProWelcomeEmail, CertificateRequestEmail } from "@/components/emails/welcome-email";
 
-// Initialisation du client Resend
-// Si la clé n'est pas présente, on loggue un avertissement mais on ne plante pas l'appli
-const resendApiKey = process.env.RESEND_API_KEY;
-
-if (!resendApiKey) {
-  console.warn("⚠️ RESEND_API_KEY manquante. Les emails ne seront pas envoyés.");
-}
-
-const resend = new Resend(resendApiKey);
-
 // Adresse d'envoi par défaut (à changer une fois le domaine vérifié sur Resend)
 // Pour les tests sans domaine vérifié, utiliser: onboarding@resend.dev
 const SENDER_EMAIL = "TraceLink <onboarding@resend.dev>";
@@ -19,7 +9,14 @@ const SENDER_EMAIL = "TraceLink <onboarding@resend.dev>";
  * Envoie l'email de bienvenue lors de l'inscription
  */
 export async function sendWelcomeEmail(email: string, name: string) {
-  if (!resendApiKey) return { success: false, error: "No API Key" };
+  const apiKey = process.env.RESEND_API_KEY;
+
+  if (!apiKey) {
+    console.warn("⚠️ RESEND_API_KEY manquante. Email non envoyé.");
+    return { success: false, error: "No API Key" };
+  }
+
+  const resend = new Resend(apiKey);
 
   console.log(`📧 Envoi de l'email de bienvenue à ${email}...`);
 
@@ -44,7 +41,14 @@ export async function sendWelcomeEmail(email: string, name: string) {
  * Envoie l'email de confirmation pour le passage au plan Pro
  */
 export async function sendProConfirmationEmail(email: string, name: string) {
-  if (!resendApiKey) return { success: false, error: "No API Key" };
+  const apiKey = process.env.RESEND_API_KEY;
+
+  if (!apiKey) {
+    console.warn("⚠️ RESEND_API_KEY manquante. Email non envoyé.");
+    return { success: false, error: "No API Key" };
+  }
+
+  const resend = new Resend(apiKey);
 
   console.log(`📧 Envoi de l'email Pro à ${email}...`);
 
@@ -75,7 +79,14 @@ export async function sendCertificateRequestEmail(
   componentType: string,
   customMessage?: string
 ) {
-  if (!resendApiKey) return { success: false, error: "No API Key" };
+  const apiKey = process.env.RESEND_API_KEY;
+
+  if (!apiKey) {
+    console.warn("⚠️ RESEND_API_KEY manquante. Email non envoyé.");
+    return { success: false, error: "No API Key" };
+  }
+
+  const resend = new Resend(apiKey);
 
   console.log(`📧 Envoi de demande de certificat à ${supplierEmail}...`);
 
