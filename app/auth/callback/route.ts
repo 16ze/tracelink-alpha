@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { sendWelcomeEmail } from "@/app/actions/email";
 
 /**
  * Route de callback pour l'authentification Supabase
@@ -86,6 +87,34 @@ export async function GET(request: Request) {
 
       // Vérification que l'utilisateur est bien créé et authentifié
       if (data.user && data.session) {
+        
+        // 📧 ENVOI EMAIL DE BIENVENUE (Une seule fois)
+        try {
+          const meta = data.user.user_metadata || {};
+          
+          // Si l'email n'a pas encore été envoyé
+          if (!meta.welcome_sent && data.user.email) {
+            console.log("👋 Nouvel utilisateur détecté, envoi email bienvenue...");
+            
+            const email = data.user.email;
+            // Récupération intelligente du nom
+            const name = meta.full_name || meta.name || meta.first_name || email.split('@')[0];
+            
+            // 1. Envoi de l'email
+            await sendWelcomeEmail(email, name);
+            
+            // 2. Marquer comme envoyé pour ne pas spammer
+            await supabase.auth.updateUser({
+              data: { welcome_sent: true }
+            });
+            
+            console.log("✅ Email bienvenue traité et metadata mise à jour");
+          }
+        } catch (emailError) {
+          // Ne pas bloquer l'inscription si l'email échoue
+          console.error("⚠️ Erreur non-bloquante email bienvenue:", emailError);
+        }
+
         // Redirection vers la page demandée (ou dashboard par défaut)
         // Si next n'a pas de locale, on l'ajoute
         const redirectPath = next.startsWith(`/${locale}/`) || next.startsWith("/fr/") || next.startsWith("/en/") 

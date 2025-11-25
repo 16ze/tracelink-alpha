@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
+import { sendProConfirmationEmail } from "@/app/actions/email";
 
 export const dynamic = "force-dynamic";
 
@@ -160,6 +161,26 @@ export async function POST(req: Request) {
     console.log("   Brand ID:", brandId);
     console.log("   Statut mis à jour: active");
     console.log("   Résultat:", JSON.stringify(updateResult, null, 2));
+
+    // ============================================
+    // ÉTAPE 8: ENVOI DE L'EMAIL DE CONFIRMATION PRO
+    // ============================================
+    if (session.customer_details?.email) {
+      console.log("📧 8. [WEBHOOK] Envoi de l'email de confirmation Pro...");
+      try {
+        const email = session.customer_details.email;
+        const name = session.customer_details.name || existingBrand.name || "Client";
+        
+        // Envoi non bloquant pour ne pas faire timeout le webhook
+        sendProConfirmationEmail(email, name).then(() => {
+          console.log("✅ [WEBHOOK] Email Pro envoyé");
+        }).catch(err => {
+          console.error("⚠️ [WEBHOOK] Erreur envoi email Pro:", err);
+        });
+      } catch (emailError) {
+        console.error("⚠️ [WEBHOOK] Erreur préparation email Pro:", emailError);
+      }
+    }
 
     return new NextResponse(
       JSON.stringify({ 
