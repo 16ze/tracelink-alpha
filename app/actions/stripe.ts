@@ -141,7 +141,16 @@ export async function createCheckoutSession(
     const successUrl = `${appUrl}/${locale}/dashboard?checkout=success`;
     const cancelUrl = `${appUrl}/${locale}/dashboard?checkout=canceled`;
 
+    // 🛒 CRITIQUE: Log avant création de la session pour traçabilité
+    console.log('🛒 Création session pour brand:', brandId);
+    console.log('   👤 User ID:', user.id);
+    console.log('   📦 Metadata qui sera envoyée:', {
+      brand_id: brandId,
+      user_id: user.id
+    });
+
     // Création de la session de checkout
+    // ⚠️ CRITIQUE: metadata DOIT contenir brand_id et user_id
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: "subscription",
@@ -155,7 +164,7 @@ export async function createCheckoutSession(
       success_url: successUrl,
       cancel_url: cancelUrl,
       metadata: {
-        brand_id: brandId,
+        brand_id: brandId, // C'est la clé vitale
         user_id: user.id,
       },
       locale: locale === "en" ? "en" : "fr",
