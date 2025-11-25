@@ -270,18 +270,18 @@ export default async function LandingPage({
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="h-5 w-5 text-primary" />
-                    <span className="text-sm">QR Code gratuit</span>
+                    <span className="text-sm">QR Code de base</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="h-5 w-5 text-primary" />
-                    <span className="text-sm">Support email</span>
+                    <span className="text-sm">Support Communauté</span>
                   </li>
                   <li className="flex items-center gap-2 text-muted-foreground">
                     <span className="h-5 w-5 flex items-center justify-center">
                       —
                     </span>
                     <span className="text-sm">
-                      Pas de {t("feature_certificates")}
+                      Pas de certificats PDF
                     </span>
                   </li>
                 </ul>
@@ -313,7 +313,7 @@ export default async function LandingPage({
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="h-5 w-5 text-primary" />
-                    <span className="text-sm">{t("feature_certificates")}</span>
+                    <span className="text-sm">Certificats PDF</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="h-5 w-5 text-primary" />
@@ -321,7 +321,11 @@ export default async function LandingPage({
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="h-5 w-5 text-primary" />
-                    <span className="text-sm">Support prioritaire</span>
+                    <span className="text-sm">Analytics détaillées</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="h-5 w-5 text-primary" />
+                    <span className="text-sm">Support Email</span>
                   </li>
                 </ul>
                 <ProButton locale={locale} label={t("cta_pro")} className="w-full mt-8" />
@@ -354,12 +358,16 @@ export default async function LandingPage({
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="h-5 w-5 text-primary" />
+                    <span className="text-sm">SLA 99.9%</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="h-5 w-5 text-primary" />
                     <span className="text-sm">Account Manager dédié</span>
                   </li>
                 </ul>
                 <Button variant="outline" className="w-full mt-8" asChild>
-                  <Link href="mailto:contact@tracelink.fr">
-                    {t("cta_contact")}
+                  <Link href="mailto:sales@tracelink.com">
+                    Demander un devis
                   </Link>
                 </Button>
               </CardContent>

@@ -26,6 +26,7 @@ import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAnalyticsStats, getUserBrand, getUserProducts } from "./actions";
+import { getUserSuppliers } from "./suppliers/actions";
 
 /**
  * Action serveur pour la déconnexion
@@ -144,6 +145,7 @@ export default async function DashboardPage({
   // ============================================
   let brand: Awaited<ReturnType<typeof getUserBrand>> = null;
   let products: Awaited<ReturnType<typeof getUserProducts>> = [];
+  let suppliers: Awaited<ReturnType<typeof getUserSuppliers>> = [];
   let analyticsStats: Awaited<ReturnType<typeof getAnalyticsStats>> = {
     totalProducts: 0,
     totalScans: 0,
@@ -161,6 +163,7 @@ export default async function DashboardPage({
   try {
     if (brand) {
       products = await getUserProducts();
+      suppliers = await getUserSuppliers();
       // Récupération des analytics
       analyticsStats = await getAnalyticsStats();
     }
@@ -168,6 +171,9 @@ export default async function DashboardPage({
     console.error("❌ Erreur lors de la récupération des produits:", error);
     // On continue avec products = [] (tableau vide)
   }
+
+  // Calcul du nombre de fournisseurs
+  const suppliersCount = suppliers.length;
 
   // ============================================
   // 4. VÉRIFICATION DU STATUT D'ABONNEMENT (SÉCURISÉE)
@@ -417,17 +423,30 @@ export default async function DashboardPage({
                 </CardContent>
               </Card>
 
-              {/* Carte de fonctionnalités à venir */}
+              {/* Carte Fournisseurs */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Fonctionnalités</CardTitle>
-                  <CardDescription>À venir prochainement</CardDescription>
+                  <CardTitle>Fournisseurs</CardTitle>
+                  <CardDescription>
+                    Gérez votre réseau de fournisseurs
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Gestion des fournisseurs, composants et certificats bientôt
-                    disponibles.
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <p className="text-2xl font-bold">
+                        {suppliersCount || 0}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Fournisseur{suppliersCount !== 1 ? "s" : ""} enregistré{suppliersCount !== 1 ? "s" : ""}
+                      </p>
+                    </div>
+                    <Link href={`/${locale}/dashboard/suppliers`}>
+                      <Button variant="outline" size="sm">
+                        Gérer
+                      </Button>
+                    </Link>
+                  </div>
                 </CardContent>
               </Card>
             </div>
