@@ -20,6 +20,12 @@ const intlMiddleware = createMiddleware({
  * 5. Exclut les routes publiques et les routes d'authentification
  */
 export async function middleware(request: NextRequest) {
+  // Exclusion des routes API pour éviter les redirections i18n
+  // CRITIQUE: Les webhooks Stripe doivent être accessibles directement sans redirection
+  if (request.nextUrl.pathname.startsWith("/api")) {
+    return NextResponse.next();
+  }
+
   // Exclure la route de callback d'authentification
   // Cette route doit gérer elle-même l'authentification
   if (request.nextUrl.pathname.startsWith("/auth/callback")) {
@@ -159,12 +165,13 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
+     * - api (API routes - webhooks, etc.)
      * - _next/static (static files)
      * - _next/image (image optimization files)
+     * - _vercel (Vercel internal routes)
      * - favicon.ico (favicon file)
-     * - api routes (gérées séparément)
      * - Les fichiers médias
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!api|_next|_vercel|.*\\..*).*)",
   ],
 };
