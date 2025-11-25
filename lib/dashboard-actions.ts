@@ -8,6 +8,7 @@ import type {
   DatabaseProduct,
   DatabaseComponent,
   DatabaseCertificate,
+  DatabaseSupplier,
 } from "@/types/supabase";
 
 /**
@@ -892,6 +893,74 @@ export async function importProducts(products: any[], locale: string = "fr"): Pr
 }
 
 /**
+ * Récupère un fournisseur par son ID avec vérification de propriété
+ *
+ * @param supplierId - ID du fournisseur à récupérer
+ * @returns Le fournisseur ou null si non trouvé ou non autorisé
+ */
+export async function getSupplierById(
+  supplierId: string
+): Promise<DatabaseSupplier | null> {
+  const supabase = await createClient();
+
+  // Récupération de l'utilisateur connecté
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    console.error("Erreur lors de la récupération de l'utilisateur:", userError);
+    return null;
+  }
+
+  try {
+    // Récupération de la marque de l'utilisateur
+    const brand = await getUserBrand();
+    if (!brand) {
+      return null;
+    }
+
+    // Récupération du fournisseur avec vérification qu'il appartient à la marque
+    const { data, error } = await supabase
+      .from("suppliers")
+      .select("*")
+      .eq("id", supplierId)
+      .eq("brand_id", brand.id)
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        // Fournisseur non trouvé
+        return null;
+      }
+      console.error("Erreur lors de la récupération du fournisseur:", error);
+      return null;
+    }
+
+    return data as DatabaseSupplier;
+  } catch (err) {
+    console.error("Erreur inattendue lors de la récupération du fournisseur:", err);
+    return null;
+  }
+}
+
+/**
+ * Récupère l'email d'un fournisseur par son ID
+ * 
+ * @param supplierId - ID du fournisseur
+ * @returns L'email du fournisseur ou null
+ */
+export async function getSupplierEmail(supplierId: string): Promise<string | null> {
+  const supplier = await getSupplierById(supplierId);
+  if (!supplier?.contact_info) {
+    return null;
+  }
+  const contactInfo = supplier.contact_info as any;
+  return contactInfo?.email || null;
+}
+
+/**
  * Action serveur pour demander un certificat à un fournisseur par email
  * 
  * @param supplierEmail - Email du fournisseur
@@ -938,12 +1007,18 @@ export async function requestCertificateFromSupplier(
     return { error: "Composant non trouvé." };
   }
 
-  // 6. Envoi de l'email
+  // 6. Récupération de l'email de l'utilisateur
+  if (!user.email) {
+    return { error: "Email utilisateur non trouvé." };
+  }
+
+  // 7. Envoi de l'email avec copie à l'utilisateur
   try {
-    const { sendCertificateRequestEmail } = await import("@/app/actions/email");
+    const { sendSupplierRequest } = await import("@/app/actions/email");
     
-    const result = await sendCertificateRequestEmail(
+    const result = await sendSupplierRequest(
       supplierEmail.trim(),
+      user.email,
       brand.name,
       product.name,
       component.type,

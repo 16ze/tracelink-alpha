@@ -39,3 +39,4 @@ COMMENT ON COLUMN brands.plan_name IS 'Nom du plan d''abonnement: free, pro, ent
 
 
 
+

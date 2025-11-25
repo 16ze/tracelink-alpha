@@ -113,3 +113,57 @@ export async function sendCertificateRequestEmail(
   }
 }
 
+/**
+ * Envoie une demande de certificat au fournisseur avec copie à l'utilisateur
+ * 
+ * @param supplierEmail - Email du fournisseur
+ * @param userEmail - Email de l'utilisateur (propriétaire de la marque) pour la copie
+ * @param brandName - Nom de la marque
+ * @param productName - Nom du produit
+ * @param componentType - Type de composant
+ * @param customMessage - Message personnalisé (optionnel)
+ */
+export async function sendSupplierRequest(
+  supplierEmail: string,
+  userEmail: string,
+  brandName: string,
+  productName: string,
+  componentType: string,
+  customMessage?: string
+) {
+  const apiKey = process.env.RESEND_API_KEY;
+
+  if (!apiKey) {
+    console.warn("⚠️ RESEND_API_KEY manquante. Email non envoyé.");
+    return { success: false, error: "No API Key" };
+  }
+
+  const resend = new Resend(apiKey);
+
+  console.log(`📧 Envoi de demande de certificat à ${supplierEmail} avec copie à ${userEmail}...`);
+
+  try {
+    // Email au fournisseur
+    const supplierData = await resend.emails.send({
+      from: SENDER_EMAIL,
+      to: supplierEmail,
+      cc: userEmail, // Copie à l'utilisateur
+      replyTo: userEmail, // Le fournisseur peut répondre directement à la marque
+      subject: `La marque ${brandName} a besoin d'un document`,
+      react: CertificateRequestEmail({ 
+        brandName, 
+        productName, 
+        componentType,
+        customMessage 
+      }),
+    });
+
+    const emailId = (supplierData as any)?.id || (supplierData as any)?.data?.id;
+    console.log("✅ Email de demande de certificat envoyé au fournisseur:", emailId);
+    return { success: true, id: emailId };
+  } catch (error) {
+    console.error("❌ Erreur envoi email demande certificat:", error);
+    return { success: false, error };
+  }
+}
+

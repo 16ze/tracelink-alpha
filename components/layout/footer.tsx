@@ -99,3 +99,4 @@ export function Footer({ locale }: FooterProps) {
   );
 }
 
+

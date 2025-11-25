@@ -221,6 +221,7 @@ export default async function ProductDetailPage({
           <TabsContent value="composition" className="mt-6">
             <ProductCompositionTab
               productId={product.id}
+              productName={product.name}
               components={componentsWithCertificates}
               isProPlan={isProPlan}
             />

@@ -78,6 +78,10 @@ interface ProductCompositionTabProps {
    */
   productId: string;
   /**
+   * Nom du produit
+   */
+  productName?: string;
+  /**
    * Liste des composants actuels avec leurs certificats
    */
   components: ComponentWithCertificates[];
@@ -116,6 +120,7 @@ function SubmitButton({
  */
 export function ProductCompositionTab({
   productId,
+  productName,
   components,
   isProPlan = false,
 }: ProductCompositionTabProps) {
@@ -202,6 +207,7 @@ export function ProductCompositionTab({
                       key={component.id}
                       component={component}
                       productId={productId}
+                      productName={productName}
                       formattedDate={formattedDate}
                       IconComponent={IconComponent}
                       hasCertificate={!!hasCertificate}

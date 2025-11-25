@@ -18,6 +18,7 @@ import { RequestCertificateDialog } from "./request-certificate-dialog";
 interface ComponentTableRowProps {
   component: DatabaseComponent;
   productId: string;
+  productName?: string;
   formattedDate: string;
   IconComponent: React.ComponentType<{ className?: string }>;
   hasCertificate: boolean;
@@ -34,6 +35,7 @@ interface ComponentTableRowProps {
 export function ComponentTableRow({
   component,
   productId,
+  productName,
   formattedDate,
   IconComponent,
   hasCertificate,
@@ -103,6 +105,8 @@ export function ComponentTableRow({
               componentId={component.id}
               componentType={component.type}
               productId={productId}
+              productName={productName}
+              supplierId={component.supplier_id}
             />
           </div>
         </TableCell>

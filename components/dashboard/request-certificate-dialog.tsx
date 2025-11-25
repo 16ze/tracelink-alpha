@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,13 +15,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Mail, Send, AlertCircle, CheckCircle2 } from "lucide-react";
-import { requestCertificateFromSupplier } from "@/lib/dashboard-actions";
+import { requestCertificateFromSupplier, getSupplierEmail } from "@/lib/dashboard-actions";
 import { useRouter } from "next/navigation";
 
 interface RequestCertificateDialogProps {
   componentId: string;
   componentType: string;
   productId: string;
+  productName?: string;
+  supplierId?: string | null;
   trigger?: React.ReactNode;
 }
 
@@ -29,6 +31,8 @@ export function RequestCertificateDialog({
   componentId,
   componentType,
   productId,
+  productName,
+  supplierId,
   trigger,
 }: RequestCertificateDialogProps) {
   const [open, setOpen] = useState(false);
@@ -37,7 +41,33 @@ export function RequestCertificateDialog({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [isLoadingSupplier, setIsLoadingSupplier] = useState(false);
   const router = useRouter();
+
+  // Récupération de l'email du fournisseur si supplier_id existe
+  useEffect(() => {
+    if (open && supplierId && !supplierEmail) {
+      setIsLoadingSupplier(true);
+      getSupplierEmail(supplierId)
+        .then((email) => {
+          if (email) {
+            setSupplierEmail(email);
+          }
+          setIsLoadingSupplier(false);
+        })
+        .catch(() => {
+          setIsLoadingSupplier(false);
+        });
+    }
+  }, [open, supplierId, supplierEmail]);
+
+  // Pré-remplir le message par défaut
+  useEffect(() => {
+    if (open && !customMessage && productName) {
+      const defaultMessage = `Bonjour,\n\nPourriez-vous nous envoyer le certificat pour ${componentType} utilisé dans ${productName} ?\n\nMerci.`;
+      setCustomMessage(defaultMessage);
+    }
+  }, [open, customMessage, componentType, productName]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,15 +123,19 @@ export function RequestCertificateDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {trigger || (
-          <Button variant="outline" size="sm" className="gap-2 bg-white">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-7 px-2"
+            title="Demander au fournisseur"
+          >
             <Mail className="h-4 w-4" />
-            Demander la preuve au fournisseur
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="bg-white">
         <DialogHeader>
-          <DialogTitle>Demander un certificat au fournisseur</DialogTitle>
+          <DialogTitle>Demander un certificat</DialogTitle>
           <DialogDescription>
             Envoyez une demande par email pour obtenir le certificat du composant{" "}
             <strong>{componentType}</strong>.
@@ -121,9 +155,12 @@ export function RequestCertificateDialog({
               value={supplierEmail}
               onChange={(e) => setSupplierEmail(e.target.value)}
               required
-              disabled={isPending}
+              disabled={isPending || isLoadingSupplier}
               className="bg-white"
             />
+            {isLoadingSupplier && (
+              <p className="text-xs text-muted-foreground">Chargement des informations du fournisseur...</p>
+            )}
           </div>
 
           {/* Message personnalisé */}
