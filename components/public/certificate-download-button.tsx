@@ -16,6 +16,10 @@ interface CertificateDownloadButtonProps {
    * Nom du composant (pour le nom du fichier)
    */
   componentName: string;
+  /**
+   * Couleur primaire de la marque (pour le style du bouton)
+   */
+  primaryColor?: string;
 }
 
 /**
@@ -24,6 +28,7 @@ interface CertificateDownloadButtonProps {
 export function CertificateDownloadButton({
   certificate,
   componentName,
+  primaryColor = "#000000",
 }: CertificateDownloadButtonProps) {
   const t = useTranslations("passport");
   
@@ -42,11 +47,15 @@ export function CertificateDownloadButton({
   return (
     <button
       onClick={handleDownload}
-      className="p-1 rounded hover:bg-muted transition-colors"
+      className="p-1 rounded hover:opacity-80 transition-opacity"
+      style={{
+        backgroundColor: primaryColor,
+        color: "#ffffff",
+      }}
       title={t("download_cert")}
       aria-label={t("download_cert")}
     >
-      <FileText className="h-4 w-4 text-primary" />
+      <FileText className="h-4 w-4" />
     </button>
   );
 }

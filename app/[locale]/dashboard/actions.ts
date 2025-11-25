@@ -202,6 +202,145 @@ export async function createBrand(
 }
 
 /**
+ * Action serveur pour mettre à jour les paramètres de la marque (White Label)
+ *
+ * @param prevState - État précédent de l'action (pour useActionState)
+ * @param formData - Données du formulaire contenant name, website_url, primary_color, remove_branding
+ * @returns État de l'action avec error ou success
+ */
+export async function updateBrandSettings(
+  prevState: BrandActionState | null,
+  formData: FormData
+): Promise<BrandActionState> {
+  const supabase = await createClient();
+
+  // Récupération de l'utilisateur connecté
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return { error: "Vous devez être connecté pour modifier les paramètres" };
+  }
+
+  // Récupération de la marque de l'utilisateur
+  const brand = await getUserBrand();
+  if (!brand) {
+    return {
+      error: "Vous devez créer une marque avant de modifier les paramètres",
+    };
+  }
+
+  // Vérification que l'utilisateur est propriétaire de la marque
+  if (brand.owner_id !== user.id) {
+    return { error: "Vous n'avez pas accès à cette marque" };
+  }
+
+  // Récupération des données du formulaire
+  const name = formData.get("name") as string;
+  const websiteUrl = formData.get("website_url") as string;
+  const primaryColor = formData.get("primary_color") as string;
+  const removeBranding = formData.get("remove_branding") === "true";
+
+  // Validation du nom (obligatoire)
+  if (!name || name.trim().length === 0) {
+    return { error: "Le nom de la marque est requis" };
+  }
+
+  if (name.trim().length < 2) {
+    return { error: "Le nom de la marque doit contenir au moins 2 caractères" };
+  }
+
+  if (name.trim().length > 255) {
+    return { error: "Le nom de la marque ne peut pas dépasser 255 caractères" };
+  }
+
+  // Validation de l'URL du site web (optionnel)
+  let websiteUrlValidated: string | null = null;
+  if (websiteUrl && websiteUrl.trim().length > 0) {
+    const urlRegex = /^https?:\/\/.+/;
+    if (!urlRegex.test(websiteUrl.trim())) {
+      return {
+        error: "L'URL du site web doit commencer par http:// ou https://",
+      };
+    }
+    websiteUrlValidated = websiteUrl.trim();
+  }
+
+  // Validation de la couleur primaire (format hex)
+  let primaryColorValidated: string = "#000000";
+  if (primaryColor && primaryColor.trim().length > 0) {
+    const hexRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
+    if (!hexRegex.test(primaryColor.trim())) {
+      return {
+        error: "La couleur doit être au format hexadécimal (ex: #FF5733)",
+      };
+    }
+    primaryColorValidated = primaryColor.trim();
+  }
+
+  // Vérification du statut d'abonnement pour remove_branding
+  // @ts-ignore - Les types Supabase ne reconnaissent pas encore les colonnes Stripe
+  const subscriptionStatus = (brand as any)?.subscription_status;
+  const isProPlan = subscriptionStatus === "active";
+
+  // Si l'utilisateur essaie de masquer le branding mais n'est pas Pro
+  if (removeBranding && !isProPlan) {
+    return {
+      error: "Masquer le logo TraceLink est réservé aux membres Pro.",
+    };
+  }
+
+  try {
+    // Mise à jour de la marque
+    // @ts-ignore - Les types Supabase ne reconnaissent pas encore toutes les colonnes
+    const updateData: any = {
+      name: name.trim(),
+      website_url: websiteUrlValidated,
+      primary_color: primaryColorValidated,
+    };
+
+    // Seuls les membres Pro peuvent masquer le branding
+    if (isProPlan) {
+      updateData.remove_branding = removeBranding;
+    }
+
+    const { data, error } = await supabase
+      .from("brands")
+      .update(updateData)
+      .eq("id", brand.id)
+      .eq("owner_id", user.id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Erreur lors de la mise à jour de la marque:", error);
+      return {
+        error: error.message || "Erreur lors de la mise à jour des paramètres",
+      };
+    }
+
+    if (!data) {
+      return { error: "Erreur inattendue lors de la mise à jour" };
+    }
+
+    // Révalidation du cache
+    revalidatePath("/dashboard", "layout");
+    revalidatePath("/dashboard/settings", "layout");
+    
+    return {
+      success: "Paramètres mis à jour avec succès !",
+    };
+  } catch (err) {
+    console.error("Erreur inattendue lors de la mise à jour:", err);
+    return {
+      error: "Une erreur est survenue. Veuillez réessayer plus tard.",
+    };
+  }
+}
+
+/**
  * Récupère tous les produits de l'utilisateur connecté (via sa marque)
  *
  * @returns La liste des produits ou un tableau vide si aucun produit

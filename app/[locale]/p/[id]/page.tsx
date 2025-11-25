@@ -85,7 +85,13 @@ export default async function ProductPassportPage({
       );
     }
 
-    // 4. Formatage de la date selon la langue
+    // 4. Récupération des paramètres White Label
+    // @ts-ignore - Les types Supabase ne reconnaissent pas encore les colonnes white label
+    const primaryColor = (product.brands as any)?.primary_color || "#000000";
+    // @ts-ignore
+    const removeBranding = (product.brands as any)?.remove_branding || false;
+
+    // 5. Formatage de la date selon la langue
     const createdDate = new Date(product.created_at);
     const formattedDate = new Intl.DateTimeFormat(
       locale === "en" ? "en-US" : "fr-FR",
@@ -98,13 +104,16 @@ export default async function ProductPassportPage({
 
     return (
       <div className="min-h-screen bg-background flex flex-col">
-        {/* Header */}
-        <header className="border-b bg-card relative">
+        {/* Header avec couleur personnalisée */}
+        <header
+          className="border-b relative"
+          style={{ backgroundColor: primaryColor }}
+        >
           <div className="container mx-auto px-4 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {product.brands.logo_url ? (
-                  <div className="relative h-12 w-12 rounded-md overflow-hidden border">
+                  <div className="relative h-12 w-12 rounded-md overflow-hidden border border-white/20">
                     <Image
                       src={product.brands.logo_url}
                       alt={product.brands.name}
@@ -114,15 +123,15 @@ export default async function ProductPassportPage({
                     />
                   </div>
                 ) : (
-                  <div className="h-12 w-12 rounded-md bg-muted flex items-center justify-center">
-                    <Package className="h-6 w-6 text-muted-foreground" />
+                  <div className="h-12 w-12 rounded-md bg-white/20 flex items-center justify-center">
+                    <Package className="h-6 w-6 text-white" />
                   </div>
                 )}
                 <div>
-                  <h1 className="text-lg font-semibold">
+                  <h1 className="text-lg font-semibold text-white">
                     {product.brands.name}
                   </h1>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-white/80">
                     {t("passport_title")}
                   </p>
                 </div>
@@ -210,8 +219,14 @@ export default async function ProductPassportPage({
                           key={component.id}
                           className="flex items-start gap-3 p-3 rounded-lg border bg-card"
                         >
-                          <div className="p-2 rounded-md bg-muted">
-                            <IconComponent className="h-5 w-5 text-muted-foreground" />
+                          <div
+                            className="p-2 rounded-md"
+                            style={{ backgroundColor: primaryColor + "20" }}
+                          >
+                            <IconComponent
+                              className="h-5 w-5"
+                              style={{ color: primaryColor }}
+                            />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
@@ -222,6 +237,7 @@ export default async function ProductPassportPage({
                                 <CertificateDownloadButton
                                   certificate={certificate}
                                   componentName={component.type}
+                                  primaryColor={primaryColor}
                                 />
                               )}
                             </div>
@@ -252,26 +268,30 @@ export default async function ProductPassportPage({
                 <p className="text-base text-foreground">{formattedDate}</p>
               </div>
 
-              {/* Footer Section */}
-              <div className="border-t pt-6 lg:pt-8">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Package className="h-4 w-4" />
-                  <span>{t("footer")}</span>
+              {/* Footer Section - Masqué si remove_branding est true */}
+              {!removeBranding && (
+                <div className="border-t pt-6 lg:pt-8">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Package className="h-4 w-4" />
+                    <span>{t("footer")}</span>
+                  </div>
                 </div>
-              </div>
+              )}
             </section>
           </div>
         </main>
 
-        {/* Mobile Footer */}
-        <footer className="border-t bg-card lg:hidden mt-auto">
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center justify-center gap-2">
-              <Package className="h-4 w-4 text-muted-foreground" />
-              <p className="text-xs text-muted-foreground">{t("footer")}</p>
+        {/* Mobile Footer - Masqué si remove_branding est true */}
+        {!removeBranding && (
+          <footer className="border-t bg-card lg:hidden mt-auto">
+            <div className="container mx-auto px-4 py-4">
+              <div className="flex items-center justify-center gap-2">
+                <Package className="h-4 w-4 text-muted-foreground" />
+                <p className="text-xs text-muted-foreground">{t("footer")}</p>
+              </div>
             </div>
-          </div>
-        </footer>
+          </footer>
+        )}
       </div>
     );
   } catch (err) {
