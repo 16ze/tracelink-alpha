@@ -1,26 +1,31 @@
-import { createClient } from "@/utils/supabase/server";
-import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
-import Link from "next/link";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { AnalyticsSection } from "@/components/dashboard/analytics-section";
+import { CreateBrandForm } from "@/components/dashboard/create-brand-form";
+import { ProductTableRow } from "@/components/dashboard/product-table-row";
+import { ProButton } from "@/components/landing/pro-button";
+import { Logo } from "@/components/logo";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
-  TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Package, LogOut, Plus, CheckCircle2 } from "lucide-react";
-import { getUserBrand, getUserProducts, getAnalyticsStats } from "./actions";
-import { CreateBrandForm } from "@/components/dashboard/create-brand-form";
-import { ProductTableRow } from "@/components/dashboard/product-table-row";
-import { AnalyticsSection } from "@/components/dashboard/analytics-section";
-import { Logo } from "@/components/logo";
-import { ProButton } from "@/components/landing/pro-button";
 import { isStripeConfigured } from "@/utils/stripe/config";
+import { createClient } from "@/utils/supabase/server";
+import { CheckCircle2, LogOut, Package, Plus } from "lucide-react";
+import { revalidatePath } from "next/cache";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getAnalyticsStats, getUserBrand, getUserProducts } from "./actions";
 
 /**
  * Action serveur pour la déconnexion
@@ -54,7 +59,8 @@ export default async function DashboardPage({
   // 1. RÉCUPÉRATION SÉCURISÉE DES PARAMÈTRES
   // ============================================
   let locale: string = "fr";
-  let searchParamsResolved: { [key: string]: string | string[] | undefined } = {};
+  let searchParamsResolved: { [key: string]: string | string[] | undefined } =
+    {};
   let isPaymentSuccess: boolean = false;
 
   try {
@@ -67,19 +73,17 @@ export default async function DashboardPage({
 
   try {
     searchParamsResolved = await searchParams;
-    
+
     // Détection du retour de paiement réussi (sécurisé)
     const checkoutParam = searchParamsResolved.checkout;
     const successParam = searchParamsResolved.success;
-    
-    isPaymentSuccess = 
-      checkoutParam === "success" || 
-      successParam === "true";
-  
-  // Force le rafraîchissement des données si le paiement vient d'être effectué
-  if (isPaymentSuccess) {
+
+    isPaymentSuccess = checkoutParam === "success" || successParam === "true";
+
+    // Force le rafraîchissement des données si le paiement vient d'être effectué
+    if (isPaymentSuccess) {
       try {
-    revalidatePath(`/${locale}/dashboard`);
+        revalidatePath(`/${locale}/dashboard`);
       } catch (error) {
         console.error("❌ Erreur lors de la revalidation du cache:", error);
         // On continue même si la revalidation échoue
@@ -94,16 +98,19 @@ export default async function DashboardPage({
   // 2. VÉRIFICATION D'AUTHENTIFICATION
   // ============================================
   let user: { id: string; email?: string } | null = null;
-  
+
   try {
     const supabase = await createClient();
-  const {
+    const {
       data: { user: authUser },
       error: userError,
-  } = await supabase.auth.getUser();
+    } = await supabase.auth.getUser();
 
     if (userError) {
-      console.error("❌ Erreur lors de la récupération de l'utilisateur:", userError);
+      console.error(
+        "❌ Erreur lors de la récupération de l'utilisateur:",
+        userError
+      );
       // Redirection vers login seulement si erreur d'auth réelle
       redirect(`/${locale}/login`);
     }
@@ -116,7 +123,12 @@ export default async function DashboardPage({
   } catch (error) {
     console.error("❌ Erreur inattendue lors de l'authentification:", error);
     // Si c'est une erreur de redirection Next.js, on la propage
-    if (error && typeof error === 'object' && 'digest' in error && (error as any).digest?.startsWith('NEXT_REDIRECT')) {
+    if (
+      error &&
+      typeof error === "object" &&
+      "digest" in error &&
+      (error as any).digest?.startsWith("NEXT_REDIRECT")
+    ) {
       throw error;
     }
     // Sinon, redirection vers login
@@ -162,7 +174,10 @@ export default async function DashboardPage({
   try {
     stripeConfigured = isStripeConfigured();
   } catch (error) {
-    console.error("❌ Erreur lors de la vérification de la configuration Stripe:", error);
+    console.error(
+      "❌ Erreur lors de la vérification de la configuration Stripe:",
+      error
+    );
     // On continue avec stripeConfigured = false
   }
 
@@ -171,15 +186,18 @@ export default async function DashboardPage({
     try {
       // Accès sécurisé à subscription_status avec vérification d'existence
       const subscriptionStatus = (brand as any)?.subscription_status;
-      
+
       // Un utilisateur est en mode gratuit si :
       // - subscription_status n'existe pas OU
       // - subscription_status !== 'active' ET ce n'est pas juste après un paiement
-      isFreePlan = 
-        !subscriptionStatus || 
+      isFreePlan =
+        !subscriptionStatus ||
         (subscriptionStatus !== "active" && !isPaymentSuccess);
     } catch (error) {
-      console.error("❌ Erreur lors de la vérification du statut d'abonnement:", error);
+      console.error(
+        "❌ Erreur lors de la vérification du statut d'abonnement:",
+        error
+      );
       // En cas d'erreur, on assume le plan gratuit (sécurité)
       isFreePlan = true;
     }
@@ -190,7 +208,9 @@ export default async function DashboardPage({
   // Vérification de sécurité finale : si user est null après toutes les vérifications,
   // on ne devrait jamais arriver ici (normalement redirigé), mais on sécurise quand même
   if (!user) {
-    console.error("❌ ERREUR CRITIQUE: user est null après vérification d'auth");
+    console.error(
+      "❌ ERREUR CRITIQUE: user est null après vérification d'auth"
+    );
     redirect(`/${locale}/login`);
   }
 
@@ -203,7 +223,8 @@ export default async function DashboardPage({
             <CheckCircle2 className="h-4 w-4" />
             <AlertTitle>Paiement reçu !</AlertTitle>
             <AlertDescription>
-              Activation de votre compte en cours... Votre abonnement Pro sera actif dans quelques instants.
+              Activation de votre compte en cours... Votre abonnement Pro sera
+              actif dans quelques instants.
             </AlertDescription>
           </Alert>
         )}
@@ -258,12 +279,12 @@ export default async function DashboardPage({
                     Limite atteinte
                   </Button>
                 ) : (
-                <Link href={`/${locale}/dashboard/products/new`}>
-                  <Button className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    Nouveau Produit
-                  </Button>
-                </Link>
+                  <Link href={`/${locale}/dashboard/products/new`}>
+                    <Button className="gap-2">
+                      <Plus className="h-4 w-4" />
+                      Nouveau Produit
+                    </Button>
+                  </Link>
                 )}
               </div>
             </div>
@@ -312,13 +333,19 @@ export default async function DashboardPage({
                         <TableHead className="w-[100px]">Image</TableHead>
                         <TableHead>Nom</TableHead>
                         <TableHead>SKU / Référence</TableHead>
-                        <TableHead className="text-right">Date de création</TableHead>
+                        <TableHead className="text-right">
+                          Date de création
+                        </TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {products.map((product) => (
-                        <ProductTableRow key={product.id} product={product} locale={locale} />
+                        <ProductTableRow
+                          key={product.id}
+                          product={product}
+                          locale={locale}
+                        />
                       ))}
                     </TableBody>
                   </Table>
@@ -337,7 +364,6 @@ export default async function DashboardPage({
 
             {/* Actions supplémentaires */}
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-
               {/* Carte d'information utilisateur */}
               <Card>
                 <CardHeader>
@@ -350,7 +376,9 @@ export default async function DashboardPage({
                     <p className="font-medium">{user.email}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">ID utilisateur</p>
+                    <p className="text-sm text-muted-foreground">
+                      ID utilisateur
+                    </p>
                     <p className="font-mono text-xs">{user.id}</p>
                   </div>
                 </CardContent>
@@ -364,7 +392,9 @@ export default async function DashboardPage({
                 </CardHeader>
                 <CardContent className="space-y-2">
                   <div>
-                    <p className="text-sm text-muted-foreground">Nom de la marque</p>
+                    <p className="text-sm text-muted-foreground">
+                      Nom de la marque
+                    </p>
                     <p className="font-medium">{brand?.name || "Non défini"}</p>
                   </div>
                   {brand?.website_url && (
@@ -403,4 +433,3 @@ export default async function DashboardPage({
     </main>
   );
 }
-

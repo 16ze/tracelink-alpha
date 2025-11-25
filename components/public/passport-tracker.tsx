@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
 import { trackScan } from "@/app/actions/analytics";
+import { useEffect } from "react";
 
 /**
  * Props pour le composant PassportTracker
@@ -12,7 +12,7 @@ interface PassportTrackerProps {
 
 /**
  * Composant pour tracker les scans (vues) de passeports
- * 
+ *
  * Appelle l'action trackScan en arrière-plan via useEffect
  * pour ne pas bloquer le rendu de la page.
  */
@@ -21,7 +21,7 @@ export function PassportTracker({ productId }: PassportTrackerProps) {
     // Détection du type d'appareil
     const getDeviceType = (): "mobile" | "desktop" | "tablet" | undefined => {
       if (typeof window === "undefined") return undefined;
-      
+
       const width = window.innerWidth;
       if (width < 768) return "mobile";
       if (width < 1024) return "tablet";
@@ -48,4 +48,3 @@ export function PassportTracker({ productId }: PassportTrackerProps) {
   // Ce composant ne rend rien visuellement
   return null;
 }
-

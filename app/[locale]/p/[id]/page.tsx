@@ -107,7 +107,7 @@ export default async function ProductPassportPage({
       <div className="min-h-screen bg-background flex flex-col">
         {/* Tracker pour enregistrer le scan (non-bloquant) */}
         <PassportTracker productId={id} />
-        
+
         {/* Header avec couleur personnalisée */}
         <header
           className="border-b relative"
@@ -135,9 +135,7 @@ export default async function ProductPassportPage({
                   <h1 className="text-lg font-semibold text-white">
                     {product.brands.name}
                   </h1>
-                  <p className="text-xs text-white/80">
-                    {t("passport_title")}
-                  </p>
+                  <p className="text-xs text-white/80">{t("passport_title")}</p>
                 </div>
               </div>
               {/* Sélecteur de langue */}
@@ -279,10 +277,11 @@ export default async function ProductPassportPage({
                 // @ts-ignore
                 const recyclability = (product as any)?.recyclability;
                 // @ts-ignore
-                const releasedMicroplastics = (product as any)?.released_microplastics;
+                const releasedMicroplastics = (product as any)
+                  ?.released_microplastics;
 
                 // Afficher la section seulement si au moins une donnée existe
-                const hasComplianceData = 
+                const hasComplianceData =
                   compositionText ||
                   careWash ||
                   careBleach !== undefined ||
@@ -300,8 +299,8 @@ export default async function ProductPassportPage({
                     "30_deg": "30°C",
                     "40_deg": "40°C",
                     "60_deg": "60°C",
-                    "hand_wash": "Lavage main",
-                    "no_wash": "Ne pas laver",
+                    hand_wash: "Lavage main",
+                    no_wash: "Ne pas laver",
                   };
                   return labels[value] || value;
                 };
@@ -310,12 +309,12 @@ export default async function ProductPassportPage({
                 const getDryLabel = (value: string | null | undefined) => {
                   if (!value) return null;
                   const labels: Record<string, string> = {
-                    "no_dryer": "Pas de sèche-linge",
-                    "tumble_low": "Sèche-linge basse temp.",
-                    "tumble_medium": "Sèche-linge moyenne temp.",
-                    "tumble_high": "Sèche-linge haute temp.",
-                    "line_dry": "Séchage à l'air libre",
-                    "flat_dry": "Séchage à plat",
+                    no_dryer: "Pas de sèche-linge",
+                    tumble_low: "Sèche-linge basse temp.",
+                    tumble_medium: "Sèche-linge moyenne temp.",
+                    tumble_high: "Sèche-linge haute temp.",
+                    line_dry: "Séchage à l'air libre",
+                    flat_dry: "Séchage à plat",
                   };
                   return labels[value] || value;
                 };
@@ -324,10 +323,10 @@ export default async function ProductPassportPage({
                 const getIronLabel = (value: string | null | undefined) => {
                   if (!value) return null;
                   const labels: Record<string, string> = {
-                    "no_iron": "Pas de repassage",
-                    "low": "Basse température (max 110°C)",
-                    "medium": "Moyenne température (max 150°C)",
-                    "high": "Haute température (max 200°C)",
+                    no_iron: "Pas de repassage",
+                    low: "Basse température (max 110°C)",
+                    medium: "Moyenne température (max 150°C)",
+                    high: "Haute température (max 200°C)",
                   };
                   return labels[value] || value;
                 };
@@ -341,39 +340,54 @@ export default async function ProductPassportPage({
                     {/* Composition */}
                     {compositionText && (
                       <div className="p-4 rounded-lg border bg-card">
-                        <p className="text-base font-medium">{compositionText}</p>
+                        <p className="text-base font-medium">
+                          {compositionText}
+                        </p>
                       </div>
                     )}
 
                     {/* Instructions d'entretien */}
-                    {(careWash || careBleach !== undefined || careDry || careIron) && (
+                    {(careWash ||
+                      careBleach !== undefined ||
+                      careDry ||
+                      careIron) && (
                       <div className="p-4 rounded-lg border bg-card space-y-3">
-                        <h4 className="text-sm font-semibold mb-3">Instructions d&apos;entretien</h4>
+                        <h4 className="text-sm font-semibold mb-3">
+                          Instructions d&apos;entretien
+                        </h4>
                         <div className="flex flex-wrap gap-4">
                           {careWash && (
                             <div className="flex items-center gap-2">
                               <span className="text-2xl">🧺</span>
-                              <span className="text-sm">{getWashLabel(careWash)}</span>
+                              <span className="text-sm">
+                                {getWashLabel(careWash)}
+                              </span>
                             </div>
                           )}
                           {careBleach !== undefined && (
                             <div className="flex items-center gap-2">
                               <span className="text-2xl">🧼</span>
                               <span className="text-sm">
-                                {careBleach ? "Javel autorisée" : "Pas de javel"}
+                                {careBleach
+                                  ? "Javel autorisée"
+                                  : "Pas de javel"}
                               </span>
                             </div>
                           )}
                           {careDry && (
                             <div className="flex items-center gap-2">
                               <span className="text-2xl">☀️</span>
-                              <span className="text-sm">{getDryLabel(careDry)}</span>
+                              <span className="text-sm">
+                                {getDryLabel(careDry)}
+                              </span>
                             </div>
                           )}
                           {careIron && (
                             <div className="flex items-center gap-2">
                               <span className="text-2xl">🔥</span>
-                              <span className="text-sm">{getIronLabel(careIron)}</span>
+                              <span className="text-sm">
+                                {getIronLabel(careIron)}
+                              </span>
                             </div>
                           )}
                         </div>
@@ -381,13 +395,18 @@ export default async function ProductPassportPage({
                     )}
 
                     {/* Impact environnemental */}
-                    {(recyclability !== undefined || releasedMicroplastics !== undefined) && (
+                    {(recyclability !== undefined ||
+                      releasedMicroplastics !== undefined) && (
                       <div className="p-4 rounded-lg border bg-card space-y-2">
-                        <h4 className="text-sm font-semibold mb-3">Impact environnemental</h4>
+                        <h4 className="text-sm font-semibold mb-3">
+                          Impact environnemental
+                        </h4>
                         {recyclability && (
                           <div className="flex items-center gap-2">
                             <span className="text-2xl">♻️</span>
-                            <span className="text-sm font-medium">Produit recyclable</span>
+                            <span className="text-sm font-medium">
+                              Produit recyclable
+                            </span>
                           </div>
                         )}
                         {releasedMicroplastics && (

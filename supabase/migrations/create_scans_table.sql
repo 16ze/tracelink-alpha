@@ -1,6 +1,7 @@
 -- Migration: Création de la table scans pour le tracking des vues de passeports
 -- Date: 2024-12-XX
 -- Description: Table pour enregistrer les scans (vues) des passeports publics
+-- ⚠️ IMPORTANT: Exécutez ce script dans le SQL Editor de Supabase
 
 -- TABLE: scans
 CREATE TABLE IF NOT EXISTS scans (
@@ -9,11 +10,7 @@ CREATE TABLE IF NOT EXISTS scans (
     brand_id UUID NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     device_type TEXT CHECK (device_type IN ('mobile', 'desktop', 'tablet')),
-    country TEXT,
-    
-    -- Index pour améliorer les performances des requêtes
-    CONSTRAINT scans_product_id_fkey FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
-    CONSTRAINT scans_brand_id_fkey FOREIGN KEY (brand_id) REFERENCES brands(id) ON DELETE CASCADE
+    country TEXT
 );
 
 -- Index pour améliorer les performances
@@ -46,4 +43,3 @@ COMMENT ON COLUMN scans.product_id IS 'ID du produit dont le passeport a été c
 COMMENT ON COLUMN scans.brand_id IS 'ID de la marque (pour requêtes rapides par marque)';
 COMMENT ON COLUMN scans.device_type IS 'Type d''appareil: mobile, desktop, tablet';
 COMMENT ON COLUMN scans.country IS 'Pays d''origine de la requête (si disponible via headers)';
-

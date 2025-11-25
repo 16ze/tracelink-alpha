@@ -1,16 +1,13 @@
 "use server";
 
-import { createClient } from "@/utils/supabase/server";
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import type {
   DatabaseBrand,
-  DatabaseProduct,
-  DatabaseComponent,
   DatabaseCertificate,
-  BrandInsert,
-  ProductInsert,
+  DatabaseComponent,
+  DatabaseProduct,
 } from "@/types/supabase";
+import { createClient } from "@/utils/supabase/server";
+import { revalidatePath } from "next/cache";
 
 /**
  * Type de retour pour les actions de marque
@@ -86,7 +83,10 @@ export async function getUserBrand(): Promise<DatabaseBrand | null> {
   } = await supabase.auth.getUser();
 
   if (userError || !user) {
-    console.error("Erreur lors de la récupération de l'utilisateur:", userError);
+    console.error(
+      "Erreur lors de la récupération de l'utilisateur:",
+      userError
+    );
     return null;
   }
 
@@ -115,7 +115,10 @@ export async function getUserBrand(): Promise<DatabaseBrand | null> {
 
     return data as DatabaseBrand;
   } catch (err) {
-    console.error("Erreur inattendue lors de la récupération de la marque:", err);
+    console.error(
+      "Erreur inattendue lors de la récupération de la marque:",
+      err
+    );
     return null;
   }
 }
@@ -178,7 +181,8 @@ export async function createBrand(
     const existingBrand = await getUserBrand();
     if (existingBrand) {
       return {
-        error: "Vous possédez déjà une marque. Vous ne pouvez en créer qu'une seule.",
+        error:
+          "Vous possédez déjà une marque. Vous ne pouvez en créer qu'une seule.",
       };
     }
 
@@ -199,7 +203,8 @@ export async function createBrand(
       if (error.code === "23505") {
         // Violation de contrainte unique (nom déjà utilisé)
         return {
-          error: "Ce nom de marque est déjà utilisé. Veuillez en choisir un autre.",
+          error:
+            "Ce nom de marque est déjà utilisé. Veuillez en choisir un autre.",
         };
       }
       console.error("Erreur lors de la création de la marque:", error);
@@ -353,7 +358,7 @@ export async function updateBrandSettings(
     // Révalidation du cache
     revalidatePath("/dashboard", "layout");
     revalidatePath("/dashboard/settings", "layout");
-    
+
     return {
       success: "Paramètres mis à jour avec succès !",
     };
@@ -380,7 +385,10 @@ export async function getUserProducts(): Promise<DatabaseProduct[]> {
   } = await supabase.auth.getUser();
 
   if (userError || !user) {
-    console.error("Erreur lors de la récupération de l'utilisateur:", userError);
+    console.error(
+      "Erreur lors de la récupération de l'utilisateur:",
+      userError
+    );
     return [];
   }
 
@@ -405,7 +413,10 @@ export async function getUserProducts(): Promise<DatabaseProduct[]> {
 
     return (data as DatabaseProduct[]) || [];
   } catch (err) {
-    console.error("Erreur inattendue lors de la récupération des produits:", err);
+    console.error(
+      "Erreur inattendue lors de la récupération des produits:",
+      err
+    );
     return [];
   }
 }
@@ -575,8 +586,7 @@ export async function createProduct(
       }
       console.error("Erreur lors de la création du produit:", insertError);
       return {
-        error:
-          insertError.message || "Erreur lors de la création du produit",
+        error: insertError.message || "Erreur lors de la création du produit",
       };
     }
 
@@ -620,7 +630,10 @@ export async function getProductById(
   } = await supabase.auth.getUser();
 
   if (userError || !user) {
-    console.error("Erreur lors de la récupération de l'utilisateur:", userError);
+    console.error(
+      "Erreur lors de la récupération de l'utilisateur:",
+      userError
+    );
     return null;
   }
 
@@ -1032,7 +1045,9 @@ export async function updateProductCompliance(
   } = await supabase.auth.getUser();
 
   if (userError || !user) {
-    return { error: "Vous devez être connecté pour modifier les données de compliance" };
+    return {
+      error: "Vous devez être connecté pour modifier les données de compliance",
+    };
   }
 
   // Récupération de la marque pour vérifier le statut d'abonnement
@@ -1050,7 +1065,8 @@ export async function updateProductCompliance(
 
   if (!isProPlan) {
     return {
-      error: "La gestion des données de compliance est réservée aux membres Pro.",
+      error:
+        "La gestion des données de compliance est réservée aux membres Pro.",
     };
   }
 
@@ -1075,7 +1091,8 @@ export async function updateProductCompliance(
   const careDry = formData.get("care_dry") as string;
   const careIron = formData.get("care_iron") as string;
   const recyclability = formData.get("recyclability") === "true";
-  const releasedMicroplastics = formData.get("released_microplastics") === "true";
+  const releasedMicroplastics =
+    formData.get("released_microplastics") === "true";
 
   // Validation des valeurs de care_wash
   const validCareWash = ["30_deg", "40_deg", "60_deg", "hand_wash", "no_wash"];
@@ -1084,7 +1101,14 @@ export async function updateProductCompliance(
   }
 
   // Validation des valeurs de care_dry
-  const validCareDry = ["no_dryer", "tumble_low", "tumble_medium", "tumble_high", "line_dry", "flat_dry"];
+  const validCareDry = [
+    "no_dryer",
+    "tumble_low",
+    "tumble_medium",
+    "tumble_high",
+    "line_dry",
+    "flat_dry",
+  ];
   if (careDry && careDry !== "" && !validCareDry.includes(careDry)) {
     return { error: "Valeur de séchage invalide" };
   }
@@ -1132,7 +1156,9 @@ export async function updateProductCompliance(
     if (error) {
       console.error("Erreur lors de la mise à jour du produit:", error);
       return {
-        error: error.message || "Erreur lors de la mise à jour des données de compliance",
+        error:
+          error.message ||
+          "Erreur lors de la mise à jour des données de compliance",
       };
     }
 
@@ -1143,7 +1169,7 @@ export async function updateProductCompliance(
     // Révalidation du cache
     revalidatePath(`/dashboard/products/${productId}`, "layout");
     revalidatePath(`/p/${productId}`, "layout");
-    
+
     return {
       success: "Données de compliance mises à jour avec succès !",
     };
@@ -1228,7 +1254,7 @@ export async function getAnalyticsStats(): Promise<AnalyticsStats> {
     if (!topProductError && topProductData && topProductData.length > 0) {
       // Compter les scans par produit
       const productScansCount: Record<string, number> = {};
-      
+
       topProductData.forEach((scan: any) => {
         const productId = scan.product_id;
         productScansCount[productId] = (productScansCount[productId] || 0) + 1;
@@ -1237,7 +1263,7 @@ export async function getAnalyticsStats(): Promise<AnalyticsStats> {
       // Trouver le produit avec le plus de scans
       let maxScans = 0;
       let topProductId = "";
-      
+
       Object.entries(productScansCount).forEach(([productId, count]) => {
         if (count > maxScans) {
           maxScans = count;
@@ -1324,7 +1350,10 @@ export async function getAnalyticsStats(): Promise<AnalyticsStats> {
       scansLast7Days,
     };
   } catch (err) {
-    console.error("Erreur inattendue lors de la récupération des analytics:", err);
+    console.error(
+      "Erreur inattendue lors de la récupération des analytics:",
+      err
+    );
     return {
       totalProducts: 0,
       totalScans: 0,
@@ -1333,4 +1362,3 @@ export async function getAnalyticsStats(): Promise<AnalyticsStats> {
     };
   }
 }
-

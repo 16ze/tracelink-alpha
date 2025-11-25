@@ -13,10 +13,10 @@ interface ScanData {
 
 /**
  * Action serveur pour tracker un scan (vue) de passeport
- * 
+ *
  * Cette fonction est non-bloquante et ne doit pas ralentir le rendu de la page.
  * Elle récupère automatiquement le brand_id associé au produit.
- * 
+ *
  * @param scanData - Données du scan (productId, deviceType, country)
  * @returns Promise<void> - Ne retourne rien car c'est fire-and-forget
  */
@@ -32,20 +32,21 @@ export async function trackScan(scanData: ScanData): Promise<void> {
       .single();
 
     if (productError || !product) {
-      console.error("Erreur lors de la récupération du produit pour tracking:", productError);
+      console.error(
+        "Erreur lors de la récupération du produit pour tracking:",
+        productError
+      );
       return; // Ne pas bloquer si le produit n'existe pas
     }
 
     // Insertion du scan dans la base de données
     // @ts-ignore - La table scans n'est pas encore dans les types générés
-    const { error: insertError } = await supabase
-      .from("scans")
-      .insert({
-        product_id: scanData.productId,
-        brand_id: product.brand_id,
-        device_type: scanData.deviceType || null,
-        country: scanData.country || null,
-      });
+    const { error: insertError } = await supabase.from("scans").insert({
+      product_id: scanData.productId,
+      brand_id: product.brand_id,
+      device_type: scanData.deviceType || null,
+      country: scanData.country || null,
+    });
 
     if (insertError) {
       console.error("Erreur lors de l'enregistrement du scan:", insertError);
@@ -57,4 +58,3 @@ export async function trackScan(scanData: ScanData): Promise<void> {
     console.error("Erreur inattendue lors du tracking:", error);
   }
 }
-

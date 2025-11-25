@@ -1,10 +1,24 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Lock, Package, Eye, TrendingUp } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import type { AnalyticsStats } from "@/app/[locale]/dashboard/actions";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Eye, Lock, Package, TrendingUp } from "lucide-react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 /**
  * Props pour le composant AnalyticsSection
@@ -18,7 +32,11 @@ interface AnalyticsSectionProps {
 /**
  * Composant pour afficher la section Analytics du dashboard
  */
-export function AnalyticsSection({ stats, isProPlan, locale }: AnalyticsSectionProps) {
+export function AnalyticsSection({
+  stats,
+  isProPlan,
+  locale,
+}: AnalyticsSectionProps) {
   return (
     <div className="space-y-6">
       <div>
@@ -33,14 +51,14 @@ export function AnalyticsSection({ stats, isProPlan, locale }: AnalyticsSectionP
         {/* Total Produits */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Produits</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Produits
+            </CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalProducts}</div>
-            <p className="text-xs text-muted-foreground">
-              Produits créés
-            </p>
+            <p className="text-xs text-muted-foreground">Produits créés</p>
           </CardContent>
         </Card>
 
@@ -52,9 +70,7 @@ export function AnalyticsSection({ stats, isProPlan, locale }: AnalyticsSectionP
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalScans}</div>
-            <p className="text-xs text-muted-foreground">
-              Vues totales
-            </p>
+            <p className="text-xs text-muted-foreground">Vues totales</p>
           </CardContent>
         </Card>
 
@@ -67,7 +83,9 @@ export function AnalyticsSection({ stats, isProPlan, locale }: AnalyticsSectionP
           <CardContent>
             {stats.topProduct ? (
               <>
-                <div className="text-2xl font-bold">{stats.topProduct.scans}</div>
+                <div className="text-2xl font-bold">
+                  {stats.topProduct.scans}
+                </div>
                 <p className="text-xs text-muted-foreground truncate">
                   {stats.topProduct.name}
                 </p>
@@ -100,23 +118,18 @@ export function AnalyticsSection({ stats, isProPlan, locale }: AnalyticsSectionP
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={stats.scansLast7Days}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="date" 
-                      tick={{ fontSize: 12 }}
-                    />
-                    <YAxis 
-                      tick={{ fontSize: 12 }}
-                    />
+                    <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} />
                     <Tooltip />
-                    <Bar 
-                      dataKey="count" 
+                    <Bar
+                      dataKey="count"
                       fill="hsl(var(--primary))"
                       radius={[4, 4, 0, 0]}
                     />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-              
+
               {/* Overlay avec message */}
               <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm rounded-lg">
                 <Alert className="w-auto max-w-md">
@@ -124,10 +137,12 @@ export function AnalyticsSection({ stats, isProPlan, locale }: AnalyticsSectionP
                   <AlertDescription>
                     <div className="space-y-2">
                       <p className="font-medium">
-                        Total: <span className="text-2xl">{stats.totalScans}</span> scans
+                        Total:{" "}
+                        <span className="text-2xl">{stats.totalScans}</span>{" "}
+                        scans
                       </p>
                       <p className="text-sm">
-                        <a 
+                        <a
                           href={`/${locale}/dashboard`}
                           className="underline font-medium"
                         >
@@ -145,22 +160,17 @@ export function AnalyticsSection({ stats, isProPlan, locale }: AnalyticsSectionP
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={stats.scansLast7Days}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="date" 
-                  tick={{ fontSize: 12 }}
-                />
-                <YAxis 
-                  tick={{ fontSize: 12 }}
-                />
-                <Tooltip 
+                <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} />
+                <Tooltip
                   contentStyle={{
                     backgroundColor: "hsl(var(--background))",
                     border: "1px solid hsl(var(--border))",
                     borderRadius: "6px",
                   }}
                 />
-                <Bar 
-                  dataKey="count" 
+                <Bar
+                  dataKey="count"
                   fill="hsl(var(--primary))"
                   radius={[4, 4, 0, 0]}
                 />
@@ -172,4 +182,3 @@ export function AnalyticsSection({ stats, isProPlan, locale }: AnalyticsSectionP
     </div>
   );
 }
-

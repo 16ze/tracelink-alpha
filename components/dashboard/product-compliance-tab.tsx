@@ -1,12 +1,19 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
-import { useFormStatus } from "react-dom";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  updateProductCompliance,
+  type ComplianceActionState,
+} from "@/app/[locale]/dashboard/actions";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -14,16 +21,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@/components/ui/alert";
-import { updateProductCompliance, type ComplianceActionState } from "@/app/[locale]/dashboard/actions";
-import { CheckCircle2, AlertCircle, Lock } from "lucide-react";
-import type { DatabaseProduct } from "@/types/supabase";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import type { DatabaseProduct } from "@/types/supabase";
+import { AlertCircle, CheckCircle2, Lock } from "lucide-react";
 import Link from "next/link";
+import { useActionState, useEffect } from "react";
+import { useFormStatus } from "react-dom";
 
 /**
  * Props pour le composant ProductComplianceTab
@@ -55,11 +59,7 @@ function SubmitButton({
 }) {
   const { pending } = useFormStatus();
   return (
-    <Button
-      type="submit"
-      disabled={pending || disabled}
-      className="w-full"
-    >
+    <Button type="submit" disabled={pending || disabled} className="w-full">
       {pending ? "Sauvegarde en cours..." : children}
     </Button>
   );
@@ -77,10 +77,10 @@ export function ProductComplianceTab({
   locale,
 }: ProductComplianceTabProps) {
   // État pour le formulaire avec useActionState (React 19)
-  const [state, formAction] = useActionState<ComplianceActionState | null, FormData>(
-    updateProductCompliance,
-    null
-  );
+  const [state, formAction] = useActionState<
+    ComplianceActionState | null,
+    FormData
+  >(updateProductCompliance, null);
 
   // Réinitialiser le formulaire après succès
   useEffect(() => {
@@ -105,7 +105,8 @@ export function ProductComplianceTab({
   // @ts-ignore
   const recyclability = (product as any)?.recyclability || false;
   // @ts-ignore
-  const releasedMicroplastics = (product as any)?.released_microplastics || false;
+  const releasedMicroplastics =
+    (product as any)?.released_microplastics || false;
 
   return (
     <div className="space-y-6">
@@ -115,8 +116,12 @@ export function ProductComplianceTab({
           <Lock className="h-4 w-4" />
           <AlertTitle>Fonctionnalité Pro</AlertTitle>
           <AlertDescription>
-            La gestion des données de compliance (Entretien & Loi AGEC) est réservée aux membres Pro.{" "}
-            <Link href={`/${locale}/dashboard`} className="underline font-medium">
+            La gestion des données de compliance (Entretien & Loi AGEC) est
+            réservée aux membres Pro.{" "}
+            <Link
+              href={`/${locale}/dashboard`}
+              className="underline font-medium"
+            >
               Passez Pro
             </Link>{" "}
             pour accéder à cette fonctionnalité.
@@ -128,7 +133,8 @@ export function ProductComplianceTab({
         <CardHeader>
           <CardTitle>Entretien & Loi AGEC</CardTitle>
           <CardDescription>
-            Informations réglementaires et instructions d&apos;entretien du produit
+            Informations réglementaires et instructions d&apos;entretien du
+            produit
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -157,8 +163,14 @@ export function ProductComplianceTab({
 
               {/* Composition Text */}
               <div className="space-y-2">
-                <Label htmlFor="composition_text" className={!isProPlan ? "text-muted-foreground" : ""}>
-                  Composition <span className="text-muted-foreground">(Ex: 100% Coton Bio)</span>
+                <Label
+                  htmlFor="composition_text"
+                  className={!isProPlan ? "text-muted-foreground" : ""}
+                >
+                  Composition{" "}
+                  <span className="text-muted-foreground">
+                    (Ex: 100% Coton Bio)
+                  </span>
                 </Label>
                 <Textarea
                   id="composition_text"
@@ -173,15 +185,28 @@ export function ProductComplianceTab({
 
               {/* Instructions d'entretien */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Instructions d&apos;entretien</h3>
+                <h3 className="text-lg font-semibold">
+                  Instructions d&apos;entretien
+                </h3>
 
                 {/* Lavage */}
                 <div className="space-y-2">
-                  <Label htmlFor="care_wash" className={!isProPlan ? "text-muted-foreground flex items-center gap-2" : ""}>
+                  <Label
+                    htmlFor="care_wash"
+                    className={
+                      !isProPlan
+                        ? "text-muted-foreground flex items-center gap-2"
+                        : ""
+                    }
+                  >
                     Température de lavage
                     {!isProPlan && <Lock className="h-4 w-4" />}
                   </Label>
-                  <Select name="care_wash" defaultValue={careWash} disabled={!isProPlan}>
+                  <Select
+                    name="care_wash"
+                    defaultValue={careWash}
+                    disabled={!isProPlan}
+                  >
                     <SelectTrigger className={!isProPlan ? "bg-muted" : ""}>
                       <SelectValue placeholder="Sélectionnez la température" />
                     </SelectTrigger>
@@ -189,7 +214,9 @@ export function ProductComplianceTab({
                       <SelectItem value="30_deg">Lavage à 30°C</SelectItem>
                       <SelectItem value="40_deg">Lavage à 40°C</SelectItem>
                       <SelectItem value="60_deg">Lavage à 60°C</SelectItem>
-                      <SelectItem value="hand_wash">Lavage à la main</SelectItem>
+                      <SelectItem value="hand_wash">
+                        Lavage à la main
+                      </SelectItem>
                       <SelectItem value="no_wash">Ne pas laver</SelectItem>
                     </SelectContent>
                   </Select>
@@ -198,7 +225,14 @@ export function ProductComplianceTab({
                 {/* Javel */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="care_bleach" className={!isProPlan ? "text-muted-foreground flex items-center gap-2" : ""}>
+                    <Label
+                      htmlFor="care_bleach"
+                      className={
+                        !isProPlan
+                          ? "text-muted-foreground flex items-center gap-2"
+                          : ""
+                      }
+                    >
                       Javel autorisée
                       {!isProPlan && <Lock className="h-4 w-4" />}
                     </Label>
@@ -228,20 +262,41 @@ export function ProductComplianceTab({
 
                 {/* Séchage */}
                 <div className="space-y-2">
-                  <Label htmlFor="care_dry" className={!isProPlan ? "text-muted-foreground flex items-center gap-2" : ""}>
+                  <Label
+                    htmlFor="care_dry"
+                    className={
+                      !isProPlan
+                        ? "text-muted-foreground flex items-center gap-2"
+                        : ""
+                    }
+                  >
                     Séchage
                     {!isProPlan && <Lock className="h-4 w-4" />}
                   </Label>
-                  <Select name="care_dry" defaultValue={careDry} disabled={!isProPlan}>
+                  <Select
+                    name="care_dry"
+                    defaultValue={careDry}
+                    disabled={!isProPlan}
+                  >
                     <SelectTrigger className={!isProPlan ? "bg-muted" : ""}>
                       <SelectValue placeholder="Sélectionnez le mode de séchage" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="no_dryer">Séchage interdit au sèche-linge</SelectItem>
-                      <SelectItem value="tumble_low">Sèche-linge à basse température</SelectItem>
-                      <SelectItem value="tumble_medium">Sèche-linge à température moyenne</SelectItem>
-                      <SelectItem value="tumble_high">Sèche-linge à haute température</SelectItem>
-                      <SelectItem value="line_dry">Séchage à l&apos;air libre</SelectItem>
+                      <SelectItem value="no_dryer">
+                        Séchage interdit au sèche-linge
+                      </SelectItem>
+                      <SelectItem value="tumble_low">
+                        Sèche-linge à basse température
+                      </SelectItem>
+                      <SelectItem value="tumble_medium">
+                        Sèche-linge à température moyenne
+                      </SelectItem>
+                      <SelectItem value="tumble_high">
+                        Sèche-linge à haute température
+                      </SelectItem>
+                      <SelectItem value="line_dry">
+                        Séchage à l&apos;air libre
+                      </SelectItem>
                       <SelectItem value="flat_dry">Séchage à plat</SelectItem>
                     </SelectContent>
                   </Select>
@@ -249,19 +304,38 @@ export function ProductComplianceTab({
 
                 {/* Repassage */}
                 <div className="space-y-2">
-                  <Label htmlFor="care_iron" className={!isProPlan ? "text-muted-foreground flex items-center gap-2" : ""}>
+                  <Label
+                    htmlFor="care_iron"
+                    className={
+                      !isProPlan
+                        ? "text-muted-foreground flex items-center gap-2"
+                        : ""
+                    }
+                  >
                     Repassage
                     {!isProPlan && <Lock className="h-4 w-4" />}
                   </Label>
-                  <Select name="care_iron" defaultValue={careIron} disabled={!isProPlan}>
+                  <Select
+                    name="care_iron"
+                    defaultValue={careIron}
+                    disabled={!isProPlan}
+                  >
                     <SelectTrigger className={!isProPlan ? "bg-muted" : ""}>
                       <SelectValue placeholder="Sélectionnez la température de repassage" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="no_iron">Repassage interdit</SelectItem>
-                      <SelectItem value="low">Repassage à basse température (max 110°C)</SelectItem>
-                      <SelectItem value="medium">Repassage à température moyenne (max 150°C)</SelectItem>
-                      <SelectItem value="high">Repassage à haute température (max 200°C)</SelectItem>
+                      <SelectItem value="no_iron">
+                        Repassage interdit
+                      </SelectItem>
+                      <SelectItem value="low">
+                        Repassage à basse température (max 110°C)
+                      </SelectItem>
+                      <SelectItem value="medium">
+                        Repassage à température moyenne (max 150°C)
+                      </SelectItem>
+                      <SelectItem value="high">
+                        Repassage à haute température (max 200°C)
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -274,7 +348,14 @@ export function ProductComplianceTab({
                 {/* Recyclabilité */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="recyclability" className={!isProPlan ? "text-muted-foreground flex items-center gap-2" : ""}>
+                    <Label
+                      htmlFor="recyclability"
+                      className={
+                        !isProPlan
+                          ? "text-muted-foreground flex items-center gap-2"
+                          : ""
+                      }
+                    >
                       ♻️ Produit recyclable
                       {!isProPlan && <Lock className="h-4 w-4" />}
                     </Label>
@@ -305,7 +386,14 @@ export function ProductComplianceTab({
                 {/* Microplastiques */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="released_microplastics" className={!isProPlan ? "text-muted-foreground flex items-center gap-2" : ""}>
+                    <Label
+                      htmlFor="released_microplastics"
+                      className={
+                        !isProPlan
+                          ? "text-muted-foreground flex items-center gap-2"
+                          : ""
+                      }
+                    >
                       Rejette des microplastiques lors du lavage
                       {!isProPlan && <Lock className="h-4 w-4" />}
                     </Label>
@@ -347,4 +435,3 @@ export function ProductComplianceTab({
     </div>
   );
 }
-

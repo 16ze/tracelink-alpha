@@ -1,29 +1,28 @@
+import { ProductComplianceTab } from "@/components/dashboard/product-compliance-tab";
+import { ProductCompositionTab } from "@/components/dashboard/product-composition-tab";
+import { ProductGeneralTab } from "@/components/dashboard/product-general-tab";
+import { ProductQRButton } from "@/components/dashboard/product-qr-button";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { createClient } from "@/utils/supabase/server";
-import { redirect, notFound } from "next/navigation";
-import Link from "next/link";
-import Image from "next/image";
 import {
   ArrowLeft,
-  Package,
   Calendar,
   ExternalLink,
   Layers,
+  Package,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import Image from "next/image";
+import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
 import {
+  getComponentCertificates,
   getProductById,
   getProductComponents,
-  getComponentCertificates,
   getUserBrand,
 } from "../../actions";
-import type { DatabaseProduct, DatabaseComponent } from "@/types/supabase";
-import { ProductGeneralTab } from "@/components/dashboard/product-general-tab";
-import { ProductCompositionTab } from "@/components/dashboard/product-composition-tab";
-import { ProductComplianceTab } from "@/components/dashboard/product-compliance-tab";
-import { ProductQRButton } from "@/components/dashboard/product-qr-button";
 
 /**
  * Page de détail d'un produit
@@ -59,7 +58,7 @@ export default async function ProductDetailPage({
 
   // Récupération de la marque pour vérifier le statut d'abonnement
   const brand = await getUserBrand();
-  
+
   // Vérification du statut d'abonnement
   // @ts-ignore - Les types Supabase ne reconnaissent pas encore les colonnes Stripe
   const subscriptionStatus = brand ? (brand as any)?.subscription_status : null;
@@ -67,7 +66,7 @@ export default async function ProductDetailPage({
 
   // Récupération des composants du produit avec leurs certificats
   const components = await getProductComponents(id);
-  
+
   // Récupération des certificats pour chaque composant
   const componentsWithCertificates = await Promise.all(
     components.map(async (component) => {
@@ -139,7 +138,10 @@ export default async function ProductDetailPage({
                         {product.name}
                       </h1>
                       <div className="flex flex-wrap items-center gap-3 mt-2">
-                        <Badge variant="secondary" className="font-mono text-xs">
+                        <Badge
+                          variant="secondary"
+                          className="font-mono text-xs"
+                        >
                           SKU: {product.sku}
                         </Badge>
                         <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -237,4 +239,3 @@ export default async function ProductDetailPage({
     </main>
   );
 }
-
