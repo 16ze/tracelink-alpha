@@ -22,11 +22,14 @@ import {
 import { isStripeConfigured } from "@/utils/stripe/config";
 import { createClient } from "@/utils/supabase/server";
 import { CheckCircle2, LogOut, Package, Plus } from "lucide-react";
-import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAnalyticsStats, getUserBrand, getUserProducts } from "./actions";
 import { getUserSuppliers } from "./suppliers/actions";
+
+// 🔥 FORCE LE MODE DYNAMIQUE - Empêche le cache Next.js
+// Cela garantit que la page récupère toujours le vrai statut subscription_status en base
+export const dynamic = 'force-dynamic';
 
 /**
  * Action serveur pour la déconnexion
@@ -81,18 +84,10 @@ export default async function DashboardPage({
 
     isPaymentSuccess = checkoutParam === "success" || successParam === "true";
 
-    // 🔄 CRITIQUE: Force le rafraîchissement du cache après paiement réussi
-    // Cela permet de récupérer le nouveau statut 'active' depuis Supabase
-    // après que le webhook Stripe ait mis à jour la base de données
+    // Note: Le mode force-dynamic garantit que les données sont toujours fraîches
+    // Pas besoin de revalidatePath ici - c'est interdit pendant le render
     if (isPaymentSuccess) {
-      console.log("🔄 [DASHBOARD] Paiement réussi détecté, revalidation du cache...");
-      try {
-        revalidatePath(`/${locale}/dashboard`, "page");
-        console.log("✅ [DASHBOARD] Cache revalidé avec succès");
-      } catch (error) {
-        console.error("❌ [DASHBOARD] Erreur lors de la revalidation du cache:", error);
-        // On continue même si la revalidation échoue
-      }
+      console.log("✅ [DASHBOARD] Paiement réussi détecté - données fraîches récupérées via force-dynamic");
     }
   } catch (error) {
     console.error("❌ Erreur lors de la récupération des searchParams:", error);
