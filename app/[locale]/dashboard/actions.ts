@@ -1742,7 +1742,7 @@ export async function importProducts(products: any[], locale: string = "fr"): Pr
     // 5. Insertion en masse
     const { error } = await supabase
       .from("products")
-      .insert(productsToInsert);
+      .insert(productsToInsert as any);
 
     if (error) {
       // Gestion des doublons SKU
