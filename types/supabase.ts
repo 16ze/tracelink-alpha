@@ -52,6 +52,9 @@ export interface DatabaseBrand {
   stripe_customer_id: string | null; // TEXT UNIQUE
   stripe_subscription_id: string | null; // TEXT
   plan_name: "free" | "pro" | "enterprise" | null; // TEXT DEFAULT 'free'
+  // Champs White Label
+  primary_color: string | null; // TEXT DEFAULT '#000000'
+  remove_branding: boolean | null; // BOOLEAN DEFAULT false
   created_at: string; // TIMESTAMPTZ (format ISO 8601)
   updated_at: string; // TIMESTAMPTZ (format ISO 8601)
 }
@@ -67,6 +70,14 @@ export interface DatabaseProduct {
   photo_url: string | null; // TEXT
   description: string | null; // TEXT
   brand_id: string; // UUID NOT NULL REFERENCES brands(id)
+  // Champs Compliance (Entretien & Loi AGEC)
+  composition_text: string | null; // TEXT
+  care_wash: "30_deg" | "40_deg" | "60_deg" | "hand_wash" | "no_wash" | null; // TEXT
+  care_bleach: boolean | null; // BOOLEAN DEFAULT false
+  care_dry: "no_dryer" | "tumble_low" | "tumble_medium" | "tumble_high" | "line_dry" | "flat_dry" | null; // TEXT
+  care_iron: "no_iron" | "low" | "medium" | "high" | null; // TEXT
+  recyclability: boolean | null; // BOOLEAN DEFAULT false
+  released_microplastics: boolean | null; // BOOLEAN DEFAULT false
   created_at: string; // TIMESTAMPTZ
   updated_at: string; // TIMESTAMPTZ
 }
@@ -116,6 +127,19 @@ export interface DatabaseCertificate {
 }
 
 /**
+ * Table: scans
+ * Les scans (vues) de passeports publics pour l'analytics
+ */
+export interface DatabaseScan {
+  id: string; // UUID
+  product_id: string; // UUID NOT NULL REFERENCES products(id)
+  brand_id: string; // UUID NOT NULL REFERENCES brands(id)
+  created_at: string; // TIMESTAMPTZ DEFAULT NOW()
+  device_type: "mobile" | "desktop" | "tablet" | null; // TEXT
+  country: string | null; // TEXT
+}
+
+/**
  * Interface principale de la base de données
  * Utilisée pour typer les clients Supabase
  */
@@ -156,6 +180,11 @@ export interface Database {
         Update: Partial<
           Omit<DatabaseCertificate, "id" | "created_at" | "updated_at">
         >;
+      };
+      scans: {
+        Row: DatabaseScan;
+        Insert: Omit<DatabaseScan, "id" | "created_at">;
+        Update: Partial<Omit<DatabaseScan, "id" | "created_at">>;
       };
     };
   };

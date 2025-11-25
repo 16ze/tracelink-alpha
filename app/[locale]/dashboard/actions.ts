@@ -1,6 +1,7 @@
 "use server";
 
 import type {
+  Database,
   DatabaseBrand,
   DatabaseCertificate,
   DatabaseComponent,
@@ -324,8 +325,7 @@ export async function updateBrandSettings(
 
   try {
     // Mise à jour de la marque
-    // @ts-ignore - Les types Supabase ne reconnaissent pas encore toutes les colonnes
-    const updateData: any = {
+    const updateData: Database["public"]["Tables"]["brands"]["Update"] = {
       name: name.trim(),
       website_url: websiteUrlValidated,
       primary_color: primaryColorValidated,
@@ -336,8 +336,7 @@ export async function updateBrandSettings(
       updateData.remove_branding = removeBranding;
     }
 
-    const { data, error } = await supabase
-      .from("brands")
+    const { data, error } = await (supabase.from("brands") as any)
       .update(updateData)
       .eq("id", brand.id)
       .eq("owner_id", user.id)
@@ -1121,33 +1120,42 @@ export async function updateProductCompliance(
 
   try {
     // Mise à jour du produit avec les données de compliance
-    // @ts-ignore - Les types Supabase ne reconnaissent pas encore les colonnes compliance
-    const updateData: any = {};
+    const updateData: Database["public"]["Tables"]["products"]["Update"] = {};
 
     if (compositionText !== null && compositionText !== undefined) {
       updateData.composition_text = compositionText.trim() || null;
     }
     if (careWash && careWash !== "") {
-      updateData.care_wash = careWash;
+      updateData.care_wash = careWash as
+        | "30_deg"
+        | "40_deg"
+        | "60_deg"
+        | "hand_wash"
+        | "no_wash";
     } else {
       updateData.care_wash = null;
     }
     updateData.care_bleach = careBleach;
     if (careDry && careDry !== "") {
-      updateData.care_dry = careDry;
+      updateData.care_dry = careDry as
+        | "no_dryer"
+        | "tumble_low"
+        | "tumble_medium"
+        | "tumble_high"
+        | "line_dry"
+        | "flat_dry";
     } else {
       updateData.care_dry = null;
     }
     if (careIron && careIron !== "") {
-      updateData.care_iron = careIron;
+      updateData.care_iron = careIron as "no_iron" | "low" | "medium" | "high";
     } else {
       updateData.care_iron = null;
     }
     updateData.recyclability = recyclability;
     updateData.released_microplastics = releasedMicroplastics;
 
-    const { data, error } = await supabase
-      .from("products")
+    const { data, error } = await (supabase.from("products") as any)
       .update(updateData)
       .eq("id", productId)
       .select()
@@ -1282,7 +1290,7 @@ export async function getAnalyticsStats(): Promise<AnalyticsStats> {
         if (!productNameError && productData) {
           topProduct = {
             id: topProductId,
-            name: productData.name,
+            name: (productData as { name: string }).name,
             scans: maxScans,
           };
         }
