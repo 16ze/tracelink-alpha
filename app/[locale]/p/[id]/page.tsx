@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 // On utilise la méthode standard pour récupérer les traductions
 import { CertificateDownloadButton } from "@/components/public/certificate-download-button";
 import { LanguageSwitcher } from "@/components/public/language-switcher";
+import { PassportTracker } from "@/components/public/passport-tracker";
 import type {
   DatabaseBrand,
   DatabaseCertificate,
@@ -104,6 +105,9 @@ export default async function ProductPassportPage({
 
     return (
       <div className="min-h-screen bg-background flex flex-col">
+        {/* Tracker pour enregistrer le scan (non-bloquant) */}
+        <PassportTracker productId={id} />
+        
         {/* Header avec couleur personnalisée */}
         <header
           className="border-b relative"

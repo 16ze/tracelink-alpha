@@ -14,9 +14,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Package, LogOut, Plus, CheckCircle2 } from "lucide-react";
-import { getUserBrand, getUserProducts } from "./actions";
+import { getUserBrand, getUserProducts, getAnalyticsStats } from "./actions";
 import { CreateBrandForm } from "@/components/dashboard/create-brand-form";
 import { ProductTableRow } from "@/components/dashboard/product-table-row";
+import { AnalyticsSection } from "@/components/dashboard/analytics-section";
 import { Logo } from "@/components/logo";
 import { ProButton } from "@/components/landing/pro-button";
 import { isStripeConfigured } from "@/utils/stripe/config";
@@ -127,6 +128,12 @@ export default async function DashboardPage({
   // ============================================
   let brand: Awaited<ReturnType<typeof getUserBrand>> = null;
   let products: Awaited<ReturnType<typeof getUserProducts>> = [];
+  let analyticsStats: Awaited<ReturnType<typeof getAnalyticsStats>> = {
+    totalProducts: 0,
+    totalScans: 0,
+    topProduct: null,
+    scansLast7Days: [],
+  };
 
   try {
     brand = await getUserBrand();
@@ -138,6 +145,8 @@ export default async function DashboardPage({
   try {
     if (brand) {
       products = await getUserProducts();
+      // Récupération des analytics
+      analyticsStats = await getAnalyticsStats();
     }
   } catch (error) {
     console.error("❌ Erreur lors de la récupération des produits:", error);
@@ -315,6 +324,15 @@ export default async function DashboardPage({
                   </Table>
                 </CardContent>
               </Card>
+            )}
+
+            {/* Section Analytics */}
+            {brand && (
+              <AnalyticsSection
+                stats={analyticsStats}
+                isProPlan={!isFreePlan}
+                locale={locale}
+              />
             )}
 
             {/* Actions supplémentaires */}

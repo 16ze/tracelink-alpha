@@ -55,6 +55,23 @@ export type ComplianceActionState = {
 };
 
 /**
+ * Type pour les statistiques d'analytics
+ */
+export interface AnalyticsStats {
+  totalProducts: number;
+  totalScans: number;
+  topProduct: {
+    id: string;
+    name: string;
+    scans: number;
+  } | null;
+  scansLast7Days: Array<{
+    date: string;
+    count: number;
+  }>;
+}
+
+/**
  * Récupère la marque de l'utilisateur connecté
  *
  * @returns La marque de l'utilisateur ou null si elle n'existe pas
@@ -1134,6 +1151,185 @@ export async function updateProductCompliance(
     console.error("Erreur inattendue lors de la mise à jour:", err);
     return {
       error: "Une erreur est survenue. Veuillez réessayer plus tard.",
+    };
+  }
+}
+
+/**
+ * Récupère les statistiques d'analytics pour la marque de l'utilisateur
+ *
+ * @returns Les statistiques d'analytics ou des valeurs par défaut en cas d'erreur
+ */
+export async function getAnalyticsStats(): Promise<AnalyticsStats> {
+  const supabase = await createClient();
+
+  // Récupération de l'utilisateur connecté
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return {
+      totalProducts: 0,
+      totalScans: 0,
+      topProduct: null,
+      scansLast7Days: [],
+    };
+  }
+
+  try {
+    // Récupération de la marque de l'utilisateur
+    const brand = await getUserBrand();
+    if (!brand) {
+      return {
+        totalProducts: 0,
+        totalScans: 0,
+        topProduct: null,
+        scansLast7Days: [],
+      };
+    }
+
+    // Récupération du nombre total de produits
+    const { count: totalProductsCount, error: productsError } = await supabase
+      .from("products")
+      .select("*", { count: "exact", head: true })
+      .eq("brand_id", brand.id);
+
+    if (productsError) {
+      console.error("Erreur lors du comptage des produits:", productsError);
+    }
+
+    const totalProducts = totalProductsCount || 0;
+
+    // Récupération du nombre total de scans
+    // @ts-ignore - La table scans n'est pas encore dans les types générés
+    const { count: totalScansCount, error: scansError } = await supabase
+      .from("scans")
+      .select("*", { count: "exact", head: true })
+      .eq("brand_id", brand.id);
+
+    if (scansError) {
+      console.error("Erreur lors du comptage des scans:", scansError);
+    }
+
+    const totalScans = totalScansCount || 0;
+
+    // Récupération du produit avec le plus de scans
+    // On utilise une requête SQL brute pour un comptage efficace
+    // @ts-ignore - La table scans n'est pas encore dans les types générés
+    const { data: topProductData, error: topProductError } = await supabase
+      .from("scans")
+      .select("product_id")
+      .eq("brand_id", brand.id);
+
+    let topProduct: AnalyticsStats["topProduct"] = null;
+
+    if (!topProductError && topProductData && topProductData.length > 0) {
+      // Compter les scans par produit
+      const productScansCount: Record<string, number> = {};
+      
+      topProductData.forEach((scan: any) => {
+        const productId = scan.product_id;
+        productScansCount[productId] = (productScansCount[productId] || 0) + 1;
+      });
+
+      // Trouver le produit avec le plus de scans
+      let maxScans = 0;
+      let topProductId = "";
+      
+      Object.entries(productScansCount).forEach(([productId, count]) => {
+        if (count > maxScans) {
+          maxScans = count;
+          topProductId = productId;
+        }
+      });
+
+      // Récupérer le nom du produit top
+      if (topProductId) {
+        const { data: productData, error: productNameError } = await supabase
+          .from("products")
+          .select("name")
+          .eq("id", topProductId)
+          .single();
+
+        if (!productNameError && productData) {
+          topProduct = {
+            id: topProductId,
+            name: productData.name,
+            scans: maxScans,
+          };
+        }
+      }
+    }
+
+    // Récupération des scans des 7 derniers jours
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+
+    // @ts-ignore - La table scans n'est pas encore dans les types générés
+    const { data: scansData, error: scans7DaysError } = await supabase
+      .from("scans")
+      .select("created_at")
+      .eq("brand_id", brand.id)
+      .gte("created_at", sevenDaysAgo.toISOString())
+      .order("created_at", { ascending: true });
+
+    const scansLast7Days: Array<{ date: string; count: number }> = [];
+
+    if (!scans7DaysError && scansData) {
+      // Initialiser les 7 derniers jours avec 0 scans
+      const last7DaysMap: Record<string, number> = {};
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        date.setHours(0, 0, 0, 0);
+        const dateKey = date.toISOString().split("T")[0];
+        last7DaysMap[dateKey] = 0;
+      }
+
+      // Compter les scans par jour
+      scansData.forEach((scan: any) => {
+        const scanDate = new Date(scan.created_at);
+        scanDate.setHours(0, 0, 0, 0);
+        const dateKey = scanDate.toISOString().split("T")[0];
+        if (last7DaysMap[dateKey] !== undefined) {
+          last7DaysMap[dateKey]++;
+        }
+      });
+
+      // Convertir en tableau pour le graphique
+      Object.entries(last7DaysMap)
+        .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
+        .forEach(([date, count]) => {
+          // Formater la date pour l'affichage (ex: "15 Déc")
+          const dateObj = new Date(date);
+          const formattedDate = new Intl.DateTimeFormat("fr-FR", {
+            day: "numeric",
+            month: "short",
+          }).format(dateObj);
+
+          scansLast7Days.push({
+            date: formattedDate,
+            count,
+          });
+        });
+    }
+
+    return {
+      totalProducts,
+      totalScans,
+      topProduct,
+      scansLast7Days,
+    };
+  } catch (err) {
+    console.error("Erreur inattendue lors de la récupération des analytics:", err);
+    return {
+      totalProducts: 0,
+      totalScans: 0,
+      topProduct: null,
+      scansLast7Days: [],
     };
   }
 }
