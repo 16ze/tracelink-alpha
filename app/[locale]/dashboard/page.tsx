@@ -1,6 +1,7 @@
 import { AnalyticsSection } from "@/components/dashboard/analytics-section";
 import { CreateBrandForm } from "@/components/dashboard/create-brand-form";
 import { ProductTableRow } from "@/components/dashboard/product-table-row";
+import { ImportProductsDialog } from "@/components/dashboard/import-products-dialog";
 import { ProButton } from "@/components/landing/pro-button";
 import { Logo } from "@/components/logo";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -279,17 +280,23 @@ export default async function DashboardPage({
               </div>
               <div className="flex items-center gap-3">
                 {isFreePlan && products.length >= 10 ? (
-                  <Button className="gap-2" disabled>
-                    <Plus className="h-4 w-4" />
-                    Limite atteinte
-                  </Button>
-                ) : (
-                  <Link href={`/${locale}/dashboard/products/new`}>
-                    <Button className="gap-2">
+                  <>
+                    <Button className="gap-2" disabled>
                       <Plus className="h-4 w-4" />
-                      Nouveau Produit
+                      Limite atteinte
                     </Button>
-                  </Link>
+                    <ImportProductsDialog locale={locale} />
+                  </>
+                ) : (
+                  <>
+                    <Link href={`/${locale}/dashboard/products/new`}>
+                      <Button className="gap-2">
+                        <Plus className="h-4 w-4" />
+                        Nouveau Produit
+                      </Button>
+                    </Link>
+                    <ImportProductsDialog locale={locale} />
+                  </>
                 )}
               </div>
             </div>

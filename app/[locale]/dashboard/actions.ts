@@ -1669,3 +1669,98 @@ export async function deleteProduct(
     };
   }
 }
+
+/**
+ * Action serveur pour importer des produits en masse via CSV
+ * 
+ * @param products - Tableau d'objets produits issus du CSV
+ * @param locale - Locale pour la revalidation
+ */
+export async function importProducts(products: any[], locale: string = "fr"): Promise<ProductActionState> {
+  const supabase = await createClient();
+
+  // 1. Vérification Authentification
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    return { error: "Vous devez être connecté pour importer des produits" };
+  }
+
+  // 2. Vérification Marque
+  const brand = await getUserBrand();
+  if (!brand) {
+    return { error: "Vous devez créer une marque avant d'importer des produits" };
+  }
+
+  // 3. Vérification Limites (Plan Gratuit)
+  // @ts-ignore
+  const subscriptionStatus = (brand as any)?.subscription_status;
+  
+  if (subscriptionStatus !== "active") {
+    // Compter les produits existants
+    const { count, error: countError } = await supabase
+      .from("products")
+      .select("*", { count: "exact", head: true })
+      .eq("brand_id", brand.id);
+
+    if (!countError) {
+      const currentCount = count || 0;
+      const newTotal = currentCount + products.length;
+      const MAX_PRODUCTS_FREE = 10;
+
+      if (newTotal > MAX_PRODUCTS_FREE) {
+        return { 
+          error: `Import impossible. Limite de 10 produits atteinte (${currentCount} existants + ${products.length} importés). Passez Pro pour illimité.` 
+        };
+      }
+    }
+  }
+
+  try {
+    // 4. Préparation des données
+    const productsToInsert = products.map(p => {
+      // Si une origine est fournie dans le CSV, on l'ajoute à la description
+      // car la table products n'a pas de colonne origin_country (c'est au niveau des composants)
+      let description = p.description || "";
+      if (p.origin) {
+        description += description ? `\n\nOrigine: ${p.origin}` : `Origine: ${p.origin}`;
+      }
+
+      return {
+        name: p.name?.trim(),
+        sku: p.sku?.trim(),
+        description: description.trim() || null,
+        brand_id: brand.id,
+        // Pas de photo par défaut pour l'import CSV
+      };
+    });
+
+    // Validation basique des données obligatoires
+    if (productsToInsert.some(p => !p.name || !p.sku)) {
+      return { error: "Format invalide : Nom et SKU sont obligatoires pour tous les produits." };
+    }
+
+    // 5. Insertion en masse
+    const { error } = await supabase
+      .from("products")
+      .insert(productsToInsert);
+
+    if (error) {
+      // Gestion des doublons SKU
+      if (error.code === "23505") {
+        return { error: "Erreur : Un ou plusieurs SKUs/Références existent déjà." };
+      }
+      console.error("Erreur Supabase Import:", error);
+      return { error: "Erreur lors de l'enregistrement en base de données." };
+    }
+
+    // 6. Revalidation
+    revalidatePath(`/${locale}/dashboard`, "layout");
+    revalidatePath(`/${locale}/dashboard/products`, "layout");
+
+    return { success: `${products.length} produits importés avec succès !` };
+
+  } catch (err) {
+    console.error("Erreur inattendue import:", err);
+    return { error: "Une erreur inattendue est survenue lors de l'import." };
+  }
+}
