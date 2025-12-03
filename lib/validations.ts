@@ -127,7 +127,7 @@ export function parseFormData<T>(
       return { success: true, data: result.data };
     } else {
       // Récupération du premier message d'erreur
-      const firstError = result.error.errors[0];
+      const firstError = result.error.issues[0];
       return {
         success: false,
         error: firstError?.message || "Erreur de validation",
@@ -159,7 +159,7 @@ export function validateImageFile(
   if (result.success) {
     return { success: true, data: result.data };
   } else {
-    const firstError = result.error.errors[0];
+    const firstError = result.error.issues[0];
     return {
       success: false,
       error: firstError?.message || "Le fichier image est invalide",

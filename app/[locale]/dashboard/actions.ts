@@ -178,7 +178,7 @@ export async function createBrand(
 
   const validation = brandSchema.safeParse(rawData);
   if (!validation.success) {
-    const firstError = validation.error.errors[0];
+    const firstError = validation.error.issues[0];
     return { error: firstError?.message || "Erreur de validation" };
   }
 
@@ -288,7 +288,7 @@ export async function updateBrandSettings(
 
   const validation = brandSettingsSchema.safeParse(rawData);
   if (!validation.success) {
-    const firstError = validation.error.errors[0];
+    const firstError = validation.error.issues[0];
     return { error: firstError?.message || "Erreur de validation" };
   }
 
@@ -494,7 +494,7 @@ export async function createProduct(
 
   const validation = productSchema.safeParse(rawData);
   if (!validation.success) {
-    const firstError = validation.error.errors[0];
+    const firstError = validation.error.issues[0];
     return { error: firstError?.message || "Erreur de validation" };
   }
 
@@ -1801,7 +1801,7 @@ export async function bulkImportProducts(
   for (const product of products) {
     const validation = bulkImportProductSchema.safeParse(product);
     if (!validation.success) {
-      const firstError = validation.error.errors[0];
+      const firstError = validation.error.issues[0];
       return { 
         error: `Erreur de validation ligne ${products.indexOf(product) + 1}: ${firstError?.message || "Données invalides"}` 
       };
