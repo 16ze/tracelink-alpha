@@ -132,12 +132,42 @@ export async function POST(req: Request) {
     console.log("   Statut actuel:", existingBrand.subscription_status || "null");
 
     // ============================================
-    // ÉTAPE 7: MISE À JOUR DU STATUT D'ABONNEMENT
+    // ÉTAPE 7: DÉTERMINATION DU PLAN
+    // ============================================
+    // Récupération du plan depuis les metadata ou depuis la subscription Stripe
+    let planName: "starter" | "pro" = "pro"; // Par défaut, on assume Pro pour compatibilité
+    
+    // Vérification dans les metadata de la session
+    if (session.metadata?.plan === "starter") {
+      planName = "starter";
+    } else {
+      // Si pas dans metadata, on essaie de récupérer depuis la subscription Stripe
+      if (session.subscription) {
+        try {
+          const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+          const priceId = subscription.items.data[0]?.price.id;
+          
+          // Comparaison avec les price IDs configurés
+          const starterPriceId = process.env.STRIPE_STARTER_PRICE_ID;
+          if (starterPriceId && priceId === starterPriceId) {
+            planName = "starter";
+          }
+        } catch (err) {
+          console.warn("⚠️ Impossible de récupérer la subscription Stripe, utilisation du plan par défaut (Pro)");
+        }
+      }
+    }
+
+    console.log("📦 Plan détecté:", planName);
+
+    // ============================================
+    // ÉTAPE 8: MISE À JOUR DU STATUT D'ABONNEMENT
     // ============================================
     const { data: updateResult, error: updateError } = await supabaseAdmin
       .from("brands")
       .update({
         subscription_status: "active",
+        plan_name: planName,
         stripe_customer_id: session.customer as string,
         stripe_subscription_id: session.subscription as string,
       })
@@ -160,10 +190,11 @@ export async function POST(req: Request) {
     console.log("✅ SUCCÈS UPDATE DB");
     console.log("   Brand ID:", brandId);
     console.log("   Statut mis à jour: active");
+    console.log("   Plan mis à jour:", planName);
     console.log("   Résultat:", JSON.stringify(updateResult, null, 2));
 
     // ============================================
-    // ÉTAPE 8: ENVOI DE L'EMAIL DE CONFIRMATION PRO
+    // ÉTAPE 9: ENVOI DE L'EMAIL DE CONFIRMATION
     // ============================================
     if (session.customer_details?.email) {
       console.log("📧 8. [WEBHOOK] Envoi de l'email de confirmation Pro...");

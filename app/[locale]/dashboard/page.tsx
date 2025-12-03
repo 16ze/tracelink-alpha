@@ -20,9 +20,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { getPlanConfig, canCreateProduct } from "@/config/plans";
 import { isStripeConfigured } from "@/utils/stripe/config";
 import { createClient } from "@/utils/supabase/server";
-import { CheckCircle2, LogOut, Package, Plus } from "lucide-react";
+import { CheckCircle2, LogOut, Package, Plus, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAnalyticsStats, getUserBrand, getUserProducts } from "./actions";
@@ -187,11 +188,21 @@ export default async function DashboardPage({
     // On continue avec stripeConfigured = false
   }
 
-  // Vérification sécurisée du statut d'abonnement
+  // Vérification sécurisée du statut d'abonnement et récupération du plan
+  let planName: "free" | "starter" | "pro" | "enterprise" | null = null;
+  
   if (brand) {
     try {
-      // Accès sécurisé à subscription_status avec vérification d'existence
+      // Accès sécurisé à subscription_status et plan_name
       const subscriptionStatus = (brand as any)?.subscription_status;
+      const brandPlanName = (brand as any)?.plan_name;
+
+      // Détermination du plan réel :
+      // - Si subscription_status === 'active', on utilise plan_name (ou 'pro' par défaut pour compatibilité)
+      // - Sinon, on considère que c'est le plan 'free'
+      planName = subscriptionStatus === "active" 
+        ? (brandPlanName || "pro") // Si actif mais pas de plan_name, on assume 'pro' pour compatibilité
+        : "free";
 
       // Un utilisateur est en mode gratuit si :
       // - subscription_status n'existe pas OU
@@ -205,11 +216,17 @@ export default async function DashboardPage({
         error
       );
       // En cas d'erreur, on assume le plan gratuit (sécurité)
+      planName = "free";
       isFreePlan = true;
     }
   } else {
     isFreePlan = false; // Pas de marque = pas de plan à afficher
   }
+
+  // Récupération de la configuration du plan
+  const planConfig = getPlanConfig(planName);
+  const maxProducts = planConfig.maxProducts;
+  const canCreate = canCreateProduct(planName, products.length);
 
   // Vérification de sécurité finale : si user est null après toutes les vérifications,
   // on ne devrait jamais arriver ici (normalement redirigé), mais on sécurise quand même
@@ -262,6 +279,22 @@ export default async function DashboardPage({
         ) : (
           /* Scénario B : Marque existante - Afficher le dashboard */
           <div className="space-y-8">
+            {/* Bannière d'upsell pour plan gratuit */}
+            {isFreePlan && stripeConfigured && (
+              <Alert className="border-primary bg-primary/5">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <AlertTitle className="text-lg font-semibold">
+                  Passez au niveau supérieur
+                </AlertTitle>
+                <AlertDescription className="flex items-center justify-between gap-4 mt-2">
+                  <span>
+                    Débloquez plus de produits et de fonctionnalités avec nos plans Starter (9€/mois) ou Pro (29€/mois).
+                  </span>
+                  <ProButton locale={locale} label="Passer Pro" variant="default" />
+                </AlertDescription>
+              </Alert>
+            )}
+
             {/* En-tête avec bouton "Nouveau Produit" */}
             <div className="flex items-center justify-between">
               <div>
@@ -271,21 +304,26 @@ export default async function DashboardPage({
                 <p className="text-muted-foreground">
                   Gérez vos produits et créez vos passeports numériques
                 </p>
-                {/* Compteur de produits pour plan gratuit */}
-                {isFreePlan && (
+                {/* Compteur de produits selon le plan */}
+                {maxProducts !== null && (
                   <p className="text-sm text-muted-foreground mt-1">
-                    Produits : {products.length} / 10 (Plan Gratuit)
+                    Produits : {products.length} / {maxProducts} ({planConfig.name === "free" ? "Plan Gratuit" : planConfig.name === "starter" ? "Plan Starter" : "Plan Pro"})
+                  </p>
+                )}
+                {maxProducts === null && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Produits : {products.length} (Illimité - Plan Pro)
                   </p>
                 )}
               </div>
               <div className="flex items-center gap-3">
-                {isFreePlan && products.length >= 10 ? (
+                {!canCreate ? (
                   <>
                     <Button className="gap-2" disabled>
                       <Plus className="h-4 w-4" />
                       Limite atteinte
                     </Button>
-                    <ImportProductsDialog locale={locale} />
+                    <ImportProductsDialog locale={locale} isFreePlan={isFreePlan} />
                   </>
                 ) : (
                   <>
@@ -295,7 +333,7 @@ export default async function DashboardPage({
                         Nouveau Produit
                       </Button>
                     </Link>
-                    <ImportProductsDialog locale={locale} />
+                    <ImportProductsDialog locale={locale} isFreePlan={isFreePlan} />
                   </>
                 )}
               </div>

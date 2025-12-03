@@ -51,7 +51,7 @@ export interface DatabaseBrand {
   subscription_status: "free" | "active" | "canceled" | "past_due" | "trialing" | null; // TEXT DEFAULT 'free'
   stripe_customer_id: string | null; // TEXT UNIQUE
   stripe_subscription_id: string | null; // TEXT
-  plan_name: "free" | "pro" | "enterprise" | null; // TEXT DEFAULT 'free'
+  plan_name: "free" | "starter" | "pro" | "enterprise" | null; // TEXT DEFAULT 'free'
   // Champs White Label
   primary_color: string | null; // TEXT DEFAULT '#000000'
   remove_branding: boolean | null; // BOOLEAN DEFAULT false

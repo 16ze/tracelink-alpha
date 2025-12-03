@@ -18,15 +18,26 @@
     "pricing_title": "Simple and transparent pricing",
     "pricing_subtitle": "Start for free, pay as you grow.",
     "plan_free": "Discovery",
+    "plan_starter": "Starter",
     "plan_pro": "Pro",
     "plan_enterprise": "Enterprise",
     "price_free": "€0",
+    "price_starter": "€9",
     "price_pro": "€29",
     "period": "/ month",
     "cta_free": "Start now",
+    "cta_starter": "Choose Starter",
     "cta_pro": "Go Pro",
     "cta_contact": "Contact Sales",
     "feature_products": "products",
-    "feature_certificates": "PDF Certificates"
+    "feature_certificates": "PDF Certificates",
+    "feature_unlimited": "Unlimited",
+    "upgrade_required": "Upgrade required"
+  },
+  "dashboard": {
+    "upgrade_banner_title": "Upgrade to the next level",
+    "upgrade_banner_description": "Unlock more products and features",
+    "products_limit_reached": "Product limit reached",
+    "plan_free_label": "Free Plan"
   }
 }

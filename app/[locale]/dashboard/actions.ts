@@ -10,6 +10,9 @@ import type {
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
+import { productSchema, brandSchema, brandSettingsSchema, validateImageFile } from "@/lib/validations";
+import { z } from "zod";
+import OpenAI from "openai";
 
 /**
  * Type de retour pour les actions de marque
@@ -165,35 +168,21 @@ export async function createBrand(
     return { error: "Vous devez être connecté pour créer une marque" };
   }
 
-  // Récupération des données du formulaire
-  const name = formData.get("name") as string;
-  const websiteUrl = formData.get("website_url") as string;
+  // ============================================
+  // VALIDATION DES DONNÉES AVEC ZOD
+  // ============================================
+  const rawData = {
+    name: formData.get("name") as string,
+    website_url: formData.get("website_url") as string,
+  };
 
-  // Validation des champs requis
-  if (!name || name.trim().length === 0) {
-    return { error: "Le nom de la marque est requis" };
+  const validation = brandSchema.safeParse(rawData);
+  if (!validation.success) {
+    const firstError = validation.error.errors[0];
+    return { error: firstError?.message || "Erreur de validation" };
   }
 
-  // Validation de la longueur du nom
-  if (name.trim().length < 2) {
-    return { error: "Le nom de la marque doit contenir au moins 2 caractères" };
-  }
-
-  if (name.trim().length > 255) {
-    return { error: "Le nom de la marque ne peut pas dépasser 255 caractères" };
-  }
-
-  // Validation optionnelle de l'URL du site web
-  let websiteUrlValidated: string | null = null;
-  if (websiteUrl && websiteUrl.trim().length > 0) {
-    const urlRegex = /^https?:\/\/.+/;
-    if (!urlRegex.test(websiteUrl.trim())) {
-      return {
-        error: "L'URL du site web doit commencer par http:// ou https://",
-      };
-    }
-    websiteUrlValidated = websiteUrl.trim();
-  }
+  const { name, website_url } = validation.data;
 
   try {
     // Vérification si l'utilisateur a déjà une marque
@@ -207,11 +196,12 @@ export async function createBrand(
 
     // Création de la marque
     // Note: subscription_status et plan_name ont une valeur par défaut 'free' dans la DB
+    // Les données sont déjà validées et sanitizées par Zod
     const { data, error } = await supabase
       .from("brands")
       .insert({
-        name: name.trim(),
-        website_url: websiteUrlValidated,
+        name,
+        website_url,
         owner_id: user.id,
       } as any)
       .select()
@@ -286,48 +276,23 @@ export async function updateBrandSettings(
     return { error: "Vous n'avez pas accès à cette marque" };
   }
 
-  // Récupération des données du formulaire
-  const name = formData.get("name") as string;
-  const websiteUrl = formData.get("website_url") as string;
-  const primaryColor = formData.get("primary_color") as string;
-  const removeBranding = formData.get("remove_branding") === "true";
+  // ============================================
+  // VALIDATION DES DONNÉES AVEC ZOD
+  // ============================================
+  const rawData = {
+    name: formData.get("name") as string,
+    website_url: formData.get("website_url") as string || null,
+    primary_color: formData.get("primary_color") as string || null,
+    remove_branding: formData.get("remove_branding") === "true",
+  };
 
-  // Validation du nom (obligatoire)
-  if (!name || name.trim().length === 0) {
-    return { error: "Le nom de la marque est requis" };
+  const validation = brandSettingsSchema.safeParse(rawData);
+  if (!validation.success) {
+    const firstError = validation.error.errors[0];
+    return { error: firstError?.message || "Erreur de validation" };
   }
 
-  if (name.trim().length < 2) {
-    return { error: "Le nom de la marque doit contenir au moins 2 caractères" };
-  }
-
-  if (name.trim().length > 255) {
-    return { error: "Le nom de la marque ne peut pas dépasser 255 caractères" };
-  }
-
-  // Validation de l'URL du site web (optionnel)
-  let websiteUrlValidated: string | null = null;
-  if (websiteUrl && websiteUrl.trim().length > 0) {
-    const urlRegex = /^https?:\/\/.+/;
-    if (!urlRegex.test(websiteUrl.trim())) {
-      return {
-        error: "L'URL du site web doit commencer par http:// ou https://",
-      };
-    }
-    websiteUrlValidated = websiteUrl.trim();
-  }
-
-  // Validation de la couleur primaire (format hex)
-  let primaryColorValidated: string = "#000000";
-  if (primaryColor && primaryColor.trim().length > 0) {
-    const hexRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
-    if (!hexRegex.test(primaryColor.trim())) {
-      return {
-        error: "La couleur doit être au format hexadécimal (ex: #FF5733)",
-      };
-    }
-    primaryColorValidated = primaryColor.trim();
-  }
+  const { name, website_url, primary_color, remove_branding } = validation.data;
 
   // Vérification du statut d'abonnement pour remove_branding
   // @ts-ignore - Les types Supabase ne reconnaissent pas encore les colonnes Stripe
@@ -343,15 +308,16 @@ export async function updateBrandSettings(
 
   try {
     // Mise à jour de la marque
+    // Les données sont déjà validées et sanitizées par Zod
     const updateData: Database["public"]["Tables"]["brands"]["Update"] = {
-      name: name.trim(),
-      website_url: websiteUrlValidated,
-      primary_color: primaryColorValidated,
+      name,
+      website_url,
+      primary_color: primary_color || "#000000",
     };
 
     // Seuls les membres Pro peuvent masquer le branding
     if (isProPlan) {
-      updateData.remove_branding = removeBranding;
+      updateData.remove_branding = remove_branding;
     }
 
     const { data, error } = await (supabase.from("brands") as any)
@@ -471,95 +437,85 @@ export async function createProduct(
   }
 
   // ============================================
-  // VÉRIFICATION DE LA LIMITE DE PRODUITS (PLAN GRATUIT)
+  // VÉRIFICATION DE LA LIMITE DE PRODUITS (PLANS)
   // ============================================
-  // Récupération du statut d'abonnement
+  // Récupération du statut d'abonnement et du plan
   // @ts-ignore - Les types Supabase ne reconnaissent pas encore les colonnes Stripe
   const subscriptionStatus = (brand as any)?.subscription_status;
+  const planName = (brand as any)?.plan_name as "free" | "starter" | "pro" | "enterprise" | null | undefined;
 
-  // Si l'utilisateur n'est pas en plan Pro (subscription_status !== 'active')
-  if (subscriptionStatus !== "active") {
-    // Compter le nombre de produits existants pour cette marque
-    const { count, error: countError } = await supabase
-      .from("products")
-      .select("*", { count: "exact", head: true })
-      .eq("brand_id", brand.id);
+  // Détermination du plan réel :
+  // - Si subscription_status === 'active', on utilise plan_name (ou 'pro' par défaut pour compatibilité)
+  // - Sinon, on considère que c'est le plan 'free'
+  const effectivePlanName: "free" | "starter" | "pro" | "enterprise" | null = 
+    subscriptionStatus === "active" 
+      ? (planName || "pro") // Si actif mais pas de plan_name, on assume 'pro' pour compatibilité
+      : "free";
 
-    if (countError) {
-      console.error("Erreur lors du comptage des produits:", countError);
-      // En cas d'erreur, on continue (sécurité : on assume qu'il peut créer)
-    } else {
-      // Limite de 10 produits pour le plan gratuit
-      const MAX_PRODUCTS_FREE = 10;
-      if (count !== null && count >= MAX_PRODUCTS_FREE) {
-        return {
-          error: "Limite de 10 produits atteinte. Passez Pro pour illimité.",
-        };
-      }
+  // Import de la configuration des plans
+  const { canCreateProduct, getUpgradeMessage } = await import("@/config/plans");
+
+  // Compter le nombre de produits existants pour cette marque
+  const { count, error: countError } = await supabase
+    .from("products")
+    .select("*", { count: "exact", head: true })
+    .eq("brand_id", brand.id);
+
+  if (countError) {
+    console.error("Erreur lors du comptage des produits:", countError);
+    // En cas d'erreur, on continue (sécurité : on assume qu'il peut créer)
+  } else {
+    // Vérification de la limite selon le plan
+    const currentProductCount = count ?? 0;
+    if (!canCreateProduct(effectivePlanName, currentProductCount)) {
+      return {
+        error: getUpgradeMessage(effectivePlanName),
+      };
     }
   }
 
-  // Récupération des données du formulaire
-  const name = formData.get("name") as string;
-  const sku = formData.get("sku") as string;
-  const description = formData.get("description") as string;
+  // ============================================
+  // VALIDATION DES DONNÉES AVEC ZOD
+  // ============================================
+  // Récupération et validation du fichier image
   const photo = formData.get("photo") as File | null;
+  const photoValidation = validateImageFile(photo);
+  if (!photoValidation.success) {
+    return { error: photoValidation.error };
+  }
+  const validatedPhoto = photoValidation.data;
 
-  // Validation des champs requis
-  if (!name || name.trim().length === 0) {
-    return { error: "Le nom du produit est requis" };
+  // Récupération et validation des données du formulaire
+  const rawData = {
+    name: formData.get("name") as string,
+    sku: formData.get("sku") as string,
+    description: formData.get("description") as string,
+  };
+
+  const validation = productSchema.safeParse(rawData);
+  if (!validation.success) {
+    const firstError = validation.error.errors[0];
+    return { error: firstError?.message || "Erreur de validation" };
   }
 
-  if (!sku || sku.trim().length === 0) {
-    return { error: "Le SKU/Référence est requis" };
-  }
-
-  // Validation du fichier photo (indispensable)
-  if (!photo || photo.size === 0) {
-    return { error: "La photo du produit est obligatoire" };
-  }
-
-  // Validation de la taille du fichier (max 10MB)
-  const maxSize = 10 * 1024 * 1024; // 10MB en bytes
-  if (photo.size > maxSize) {
-    return {
-      error: "La taille de l'image ne doit pas dépasser 10MB",
-    };
-  }
-
-  // Validation du type de fichier (images uniquement)
-  const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
-  if (!allowedTypes.includes(photo.type)) {
-    return {
-      error: "Le fichier doit être une image (JPEG, PNG ou WebP)",
-    };
-  }
-
-  // Validation de la longueur des champs
-  if (name.trim().length > 255) {
-    return { error: "Le nom du produit ne peut pas dépasser 255 caractères" };
-  }
-
-  if (sku.trim().length > 100) {
-    return { error: "Le SKU ne peut pas dépasser 100 caractères" };
-  }
+  const { name, sku, description } = validation.data;
 
   try {
     // Génération d'un nom de fichier unique
     const timestamp = Date.now();
-    const sanitizedOriginalName = photo.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+    const sanitizedOriginalName = validatedPhoto.name.replace(/[^a-zA-Z0-9.-]/g, "_");
     const uniqueFileName = `${timestamp}-${sanitizedOriginalName}`;
     const filePath = `${user.id}/${uniqueFileName}`;
 
     // Conversion du fichier en ArrayBuffer pour l'upload
-    const arrayBuffer = await photo.arrayBuffer();
+    const arrayBuffer = await validatedPhoto.arrayBuffer();
     const fileBuffer = new Uint8Array(arrayBuffer);
 
     // Upload de l'image vers Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from("product-images")
       .upload(filePath, fileBuffer, {
-        contentType: photo.type,
+        contentType: validatedPhoto.type,
         upsert: false, // Ne pas écraser si le fichier existe déjà
       });
 
@@ -578,12 +534,13 @@ export async function createProduct(
     } = supabase.storage.from("product-images").getPublicUrl(filePath);
 
     // Insertion du produit dans la table products
+    // Les données sont déjà validées et sanitizées par Zod
     const { data: productData, error: insertError } = await supabase
       .from("products")
       .insert({
-        name: name.trim(),
-        sku: sku.trim(),
-        description: description?.trim() || null,
+        name,
+        sku,
+        description,
         photo_url: publicUrl,
         brand_id: brand.id,
       } as any)
@@ -1691,27 +1648,36 @@ export async function importProducts(products: any[], locale: string = "fr"): Pr
     return { error: "Vous devez créer une marque avant d'importer des produits" };
   }
 
-  // 3. Vérification Limites (Plan Gratuit)
+  // 3. Vérification Limites selon le plan
   // @ts-ignore
   const subscriptionStatus = (brand as any)?.subscription_status;
-  
-  if (subscriptionStatus !== "active") {
-    // Compter les produits existants
-    const { count, error: countError } = await supabase
-      .from("products")
-      .select("*", { count: "exact", head: true })
-      .eq("brand_id", brand.id);
+  const planName = (brand as any)?.plan_name as "free" | "starter" | "pro" | "enterprise" | null | undefined;
 
-    if (!countError) {
-      const currentCount = count || 0;
-      const newTotal = currentCount + products.length;
-      const MAX_PRODUCTS_FREE = 10;
+  // Détermination du plan réel
+  const effectivePlanName: "free" | "starter" | "pro" | "enterprise" | null = 
+    subscriptionStatus === "active" 
+      ? (planName || "pro")
+      : "free";
 
-      if (newTotal > MAX_PRODUCTS_FREE) {
-        return { 
-          error: `Import impossible. Limite de 10 produits atteinte (${currentCount} existants + ${products.length} importés). Passez Pro pour illimité.` 
-        };
-      }
+  // Import de la configuration des plans
+  const { getPlanConfig, canCreateProduct, getUpgradeMessage } = await import("@/config/plans");
+  const planConfig = getPlanConfig(effectivePlanName);
+
+  // Compter les produits existants
+  const { count, error: countError } = await supabase
+    .from("products")
+    .select("*", { count: "exact", head: true })
+    .eq("brand_id", brand.id);
+
+  if (!countError) {
+    const currentCount = count || 0;
+    const newTotal = currentCount + products.length;
+
+    // Vérifier si l'import est possible
+    if (planConfig.maxProducts !== null && newTotal > planConfig.maxProducts) {
+      return { 
+        error: `Import impossible. Limite de ${planConfig.maxProducts} produits atteinte (${currentCount} existants + ${products.length} importés). ${getUpgradeMessage(effectivePlanName)}` 
+      };
     }
   }
 
@@ -1762,6 +1728,463 @@ export async function importProducts(products: any[], locale: string = "fr"): Pr
   } catch (err) {
     console.error("Erreur inattendue import:", err);
     return { error: "Une erreur inattendue est survenue lors de l'import." };
+  }
+}
+
+/**
+ * Schéma de validation pour un produit importé via CSV
+ */
+const bulkImportProductSchema = z.object({
+  name: z.string().min(1, "Le nom est requis").max(255, "Le nom ne peut pas dépasser 255 caractères").trim(),
+  sku: z.string().min(1, "Le SKU est requis").max(100, "Le SKU ne peut pas dépasser 100 caractères").trim(),
+  description: z.string().max(5000, "La description ne peut pas dépasser 5000 caractères").trim().nullable().optional().transform((val) => val || null),
+  origin_country: z.string().max(100, "Le pays d'origine ne peut pas dépasser 100 caractères").trim().nullable().optional().transform((val) => val || null),
+});
+
+/**
+ * Action serveur pour importer des produits en masse via CSV (comptes payants uniquement)
+ * 
+ * Cette fonction :
+ * - Vérifie que l'utilisateur est en plan payant (Starter/Pro)
+ * - Vérifie que l'import ne dépasse pas le quota
+ * - Gère les doublons de SKU (met à jour les produits existants)
+ * - Fait un insert massif optimisé
+ * 
+ * @param products - Tableau d'objets produits issus du CSV
+ * @param locale - Locale pour la revalidation
+ * @returns État de l'action avec error ou success
+ */
+export async function bulkImportProducts(
+  products: any[],
+  locale: string = "fr"
+): Promise<ProductActionState> {
+  const supabase = await createClient();
+
+  // 1. Vérification Authentification
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    return { error: "Vous devez être connecté pour importer des produits" };
+  }
+
+  // 2. Vérification Marque
+  const brand = await getUserBrand();
+  if (!brand) {
+    return { error: "Vous devez créer une marque avant d'importer des produits" };
+  }
+
+  // 3. FEATURE GATE : Vérification que l'utilisateur est en plan payant
+  // @ts-ignore
+  const subscriptionStatus = (brand as any)?.subscription_status;
+  const planName = (brand as any)?.plan_name as "free" | "starter" | "pro" | "enterprise" | null | undefined;
+
+  // Détermination du plan réel
+  const effectivePlanName: "free" | "starter" | "pro" | "enterprise" | null = 
+    subscriptionStatus === "active" 
+      ? (planName || "pro")
+      : "free";
+
+  // L'import CSV est réservé aux comptes payants
+  if (effectivePlanName === "free") {
+    return { 
+      error: "L'import CSV est réservé aux comptes Starter et Pro. Passez à un plan payant pour utiliser cette fonctionnalité." 
+    };
+  }
+
+  // 4. Validation et sanitization des données avec Zod
+  const validatedProducts: Array<{
+    name: string;
+    sku: string;
+    description: string | null;
+    origin_country: string | null;
+  }> = [];
+
+  for (const product of products) {
+    const validation = bulkImportProductSchema.safeParse(product);
+    if (!validation.success) {
+      const firstError = validation.error.errors[0];
+      return { 
+        error: `Erreur de validation ligne ${products.indexOf(product) + 1}: ${firstError?.message || "Données invalides"}` 
+      };
+    }
+    validatedProducts.push(validation.data);
+  }
+
+  if (validatedProducts.length === 0) {
+    return { error: "Aucun produit valide à importer." };
+  }
+
+  // 5. Vérification des limites selon le plan
+  const { getPlanConfig, canCreateProduct, getUpgradeMessage } = await import("@/config/plans");
+  const planConfig = getPlanConfig(effectivePlanName);
+
+  // Compter les produits existants
+  const { count, error: countError } = await supabase
+    .from("products")
+    .select("*", { count: "exact", head: true })
+    .eq("brand_id", brand.id);
+
+  if (countError) {
+    console.error("Erreur lors du comptage des produits:", countError);
+    return { error: "Erreur lors de la vérification des limites." };
+  }
+
+  const currentCount = count || 0;
+  
+  // Récupérer les SKUs existants pour détecter les doublons
+  const { data: existingProducts, error: existingError } = await supabase
+    .from("products")
+    .select("sku")
+    .eq("brand_id", brand.id);
+
+  if (existingError) {
+    console.error("Erreur lors de la récupération des SKUs existants:", existingError);
+    return { error: "Erreur lors de la vérification des doublons." };
+  }
+
+  const existingSkus = new Set((existingProducts || []).map(p => p.sku));
+  const newProducts = validatedProducts.filter(p => !existingSkus.has(p.sku));
+  const duplicateProducts = validatedProducts.filter(p => existingSkus.has(p.sku));
+
+  // Calculer le nombre de nouveaux produits qui seront ajoutés
+  const newProductsCount = newProducts.length;
+  const finalCount = currentCount + newProductsCount;
+
+  // Vérifier si l'import est possible (seuls les nouveaux produits comptent)
+  if (planConfig.maxProducts !== null && finalCount > planConfig.maxProducts) {
+    return { 
+      error: `Import impossible. Limite de ${planConfig.maxProducts} produits atteinte (${currentCount} existants + ${newProductsCount} nouveaux). ${getUpgradeMessage(effectivePlanName)}` 
+    };
+  }
+
+  try {
+    // 6. Préparation des données pour insertion
+    const productsToInsert = newProducts.map(p => {
+      // Si origin_country est fourni, on l'ajoute à la description
+      // car la table products n'a pas de colonne origin_country (c'est au niveau des composants)
+      let description = p.description || "";
+      if (p.origin_country) {
+        description += description ? `\n\nPays d'origine: ${p.origin_country}` : `Pays d'origine: ${p.origin_country}`;
+      }
+
+      return {
+        name: p.name,
+        sku: p.sku,
+        description: description.trim() || null,
+        brand_id: brand.id,
+        // Pas de photo par défaut pour l'import CSV
+      };
+    });
+
+    // 7. Mise à jour des produits en doublon (mise à jour des informations)
+    let updatedCount = 0;
+    if (duplicateProducts.length > 0) {
+      for (const duplicate of duplicateProducts) {
+        let description = duplicate.description || "";
+        if (duplicate.origin_country) {
+          description += description ? `\n\nPays d'origine: ${duplicate.origin_country}` : `Pays d'origine: ${duplicate.origin_country}`;
+        }
+
+        const { error: updateError } = await supabase
+          .from("products")
+          .update({
+            name: duplicate.name,
+            description: description.trim() || null,
+          })
+          .eq("brand_id", brand.id)
+          .eq("sku", duplicate.sku);
+
+        if (!updateError) {
+          updatedCount++;
+        }
+      }
+    }
+
+    // 8. Insertion en masse des nouveaux produits
+    let insertedCount = 0;
+    if (productsToInsert.length > 0) {
+      const { error: insertError } = await (supabase
+        .from("products") as any)
+        .insert(productsToInsert);
+
+      if (insertError) {
+        console.error("Erreur Supabase Import:", insertError);
+        return { error: "Erreur lors de l'enregistrement en base de données." };
+      }
+      insertedCount = productsToInsert.length;
+    }
+
+    // 9. Revalidation
+    revalidatePath(`/${locale}/dashboard`, "layout");
+    revalidatePath(`/${locale}/dashboard/products`, "layout");
+
+    // 10. Message de succès détaillé
+    const messages: string[] = [];
+    if (insertedCount > 0) {
+      messages.push(`${insertedCount} nouveau(x) produit(s) importé(s)`);
+    }
+    if (updatedCount > 0) {
+      messages.push(`${updatedCount} produit(s) mis à jour (SKU existant)`);
+    }
+    if (duplicateProducts.length > updatedCount) {
+      messages.push(`${duplicateProducts.length - updatedCount} produit(s) ignoré(s) (erreur lors de la mise à jour)`);
+    }
+
+    return { 
+      success: messages.length > 0 
+        ? messages.join(", ") + " avec succès !" 
+        : "Aucun produit à importer (tous les SKUs existent déjà)." 
+    };
+
+  } catch (err) {
+    console.error("Erreur inattendue import:", err);
+    return { error: "Une erreur inattendue est survenue lors de l'import." };
+  }
+}
+
+/**
+ * Type de retour pour l'analyse de certificat
+ */
+export type CertificateAnalysisResult = {
+  success: true;
+  data: {
+    number: string | null;
+    expiration_date: string | null;
+    organization_name: string | null;
+    scope_materials: string | null;
+  };
+} | {
+  success: false;
+  error: string;
+};
+
+/**
+ * Action serveur pour analyser un certificat avec OpenAI et extraire les métadonnées
+ * 
+ * Cette fonction :
+ * - Accepte un fichier (PDF ou Image)
+ * - Convertit le fichier en base64
+ * - Envoie à OpenAI GPT-4o avec l'API Vision
+ * - Extrait les métadonnées (number, expiration_date, organization_name, scope_materials)
+ * - Retourne un JSON avec les données extraites
+ * 
+ * @param file - Le fichier à analyser (PDF ou Image)
+ * @returns Les métadonnées extraites ou une erreur
+ */
+export async function analyzeCertificate(
+  file: File
+): Promise<CertificateAnalysisResult> {
+  try {
+    // 1. Vérification de la clé API OpenAI
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      console.error("OPENAI_API_KEY n'est pas définie dans les variables d'environnement");
+      return {
+        success: false,
+        error: "Configuration OpenAI manquante. Veuillez contacter le support.",
+      };
+    }
+
+    // 2. Validation du fichier
+    if (!file || file.size === 0) {
+      return {
+        success: false,
+        error: "Le fichier est vide ou invalide.",
+      };
+    }
+
+    // Validation de la taille du fichier (max 20MB pour OpenAI Vision)
+    const maxSize = 20 * 1024 * 1024; // 20MB en bytes
+    if (file.size > maxSize) {
+      return {
+        success: false,
+        error: "La taille du fichier ne doit pas dépasser 20MB.",
+      };
+    }
+
+    // Validation du type de fichier
+    const allowedTypes = [
+      "application/pdf",
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/webp",
+    ];
+    if (!allowedTypes.includes(file.type)) {
+      return {
+        success: false,
+        error: "Le fichier doit être un PDF ou une image (JPEG, PNG ou WebP).",
+      };
+    }
+
+    // 3. Conversion du fichier en base64
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const base64 = buffer.toString("base64");
+    
+    // Détermination du type MIME pour OpenAI
+    let mimeType: string;
+    if (file.type === "application/pdf") {
+      mimeType = "application/pdf";
+    } else if (file.type === "image/jpeg" || file.type === "image/jpg") {
+      mimeType = "image/jpeg";
+    } else if (file.type === "image/png") {
+      mimeType = "image/png";
+    } else if (file.type === "image/webp") {
+      mimeType = "image/webp";
+    } else {
+      return {
+        success: false,
+        error: "Type de fichier non supporté.",
+      };
+    }
+
+    // 4. Initialisation du client OpenAI
+    const openai = new OpenAI({
+      apiKey: apiKey,
+    });
+
+    // 5. Prompt système pour l'extraction
+    const systemPrompt = `Tu es un expert en certification textile. Extrais les données suivantes de ce document au format JSON strict (sans markdown, sans code block, juste le JSON brut) :
+{
+  "number": "numéro du certificat (ex: GOTS-2024-12345)",
+  "expiration_date": "date d'expiration au format YYYY-MM-DD (ex: 2025-12-31)",
+  "organization_name": "nom de l'organisme certificateur (ex: GOTS, Oeko-Tex, etc.)",
+  "scope_materials": "matériaux couverts par le certificat (ex: Coton biologique, Laine mérinos, etc.)"
+}
+
+Si une information n'est pas trouvée dans le document, utilise null pour ce champ.
+Retourne UNIQUEMENT le JSON, sans texte supplémentaire, sans explications, sans markdown.`;
+
+    // 6. Appel à l'API OpenAI GPT-4o avec Vision
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: systemPrompt,
+        },
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: "Analyse ce document de certificat et extrais les métadonnées demandées. Retourne uniquement le JSON sans formatage markdown.",
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:${mimeType};base64,${base64}`,
+              },
+            },
+          ],
+        },
+      ],
+      temperature: 0.1, // Faible température pour plus de précision
+      max_tokens: 500, // Limite pour le JSON
+      response_format: { type: "json_object" }, // Force le format JSON
+    });
+
+    // 7. Extraction et parsing de la réponse
+    const responseContent = completion.choices[0]?.message?.content?.trim();
+    
+    if (!responseContent) {
+      console.error("Aucune réponse générée par OpenAI");
+      return {
+        success: false,
+        error: "Impossible d'extraire les métadonnées du document. Veuillez vérifier que le document est lisible.",
+      };
+    }
+
+    // 8. Parsing du JSON (peut être dans un code block markdown ou brut)
+    let jsonString = responseContent;
+    
+    // Nettoyage : retirer les code blocks markdown si présents
+    jsonString = jsonString.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+    
+    // Parsing du JSON
+    let parsedData: {
+      number?: string | null;
+      expiration_date?: string | null;
+      organization_name?: string | null;
+      scope_materials?: string | null;
+    };
+
+    try {
+      parsedData = JSON.parse(jsonString);
+    } catch (parseError) {
+      console.error("Erreur lors du parsing JSON:", parseError);
+      console.error("Contenu reçu:", responseContent);
+      return {
+        success: false,
+        error: "Impossible de parser la réponse de l'IA. Le document pourrait être illisible ou non reconnu.",
+      };
+    }
+
+    // 9. Validation et normalisation des données
+    const result = {
+      number: parsedData.number || null,
+      expiration_date: parsedData.expiration_date || null,
+      organization_name: parsedData.organization_name || null,
+      scope_materials: parsedData.scope_materials || null,
+    };
+
+    // Validation de la date si présente
+    if (result.expiration_date) {
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(result.expiration_date)) {
+        // Tentative de correction du format de date
+        try {
+          const date = new Date(result.expiration_date);
+          if (!isNaN(date.getTime())) {
+            result.expiration_date = date.toISOString().split("T")[0];
+          } else {
+            result.expiration_date = null;
+          }
+        } catch {
+          result.expiration_date = null;
+        }
+      }
+    }
+
+    return {
+      success: true,
+      data: result,
+    };
+  } catch (error) {
+    console.error("Erreur lors de l'analyse du certificat:", error);
+    
+    // Gestion des erreurs spécifiques OpenAI
+    if (error instanceof OpenAI.APIError) {
+      if (error.status === 401) {
+        return {
+          success: false,
+          error: "Clé API OpenAI invalide. Veuillez contacter le support.",
+        };
+      }
+      if (error.status === 429) {
+        return {
+          success: false,
+          error: "Limite de requêtes OpenAI atteinte. Veuillez réessayer plus tard.",
+        };
+      }
+      if (error.status === 400) {
+        return {
+          success: false,
+          error: "Le fichier est trop volumineux ou dans un format non supporté.",
+        };
+      }
+      return {
+        success: false,
+        error: `Erreur OpenAI: ${error.message}`,
+      };
+    }
+
+    return {
+      success: false,
+      error: error instanceof Error 
+        ? `Erreur lors de l'analyse: ${error.message}` 
+        : "Une erreur inattendue est survenue lors de l'analyse du certificat.",
+    };
   }
 }
 

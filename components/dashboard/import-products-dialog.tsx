@@ -20,22 +20,27 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Upload, Download, FileText, CheckCircle2, AlertCircle } from "lucide-react";
-import { importProducts } from "@/lib/dashboard-actions";
+import { bulkImportProducts } from "@/app/[locale]/dashboard/actions";
 import { useRouter } from "next/navigation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface ImportProductsDialogProps {
   locale: string;
+  isFreePlan?: boolean; // Feature gate : true si plan gratuit (masque le bouton)
 }
 
 interface ParsedProduct {
   name: string;
   sku: string;
   description?: string;
-  origin?: string;
+  origin_country?: string;
 }
 
-export function ImportProductsDialog({ locale }: ImportProductsDialogProps) {
+export function ImportProductsDialog({ locale, isFreePlan = false }: ImportProductsDialogProps) {
+  // Feature gate : Masquer le bouton pour les comptes gratuits
+  if (isFreePlan) {
+    return null;
+  }
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<ParsedProduct[]>([]);
@@ -128,8 +133,24 @@ export function ImportProductsDialog({ locale }: ImportProductsDialogProps) {
 
         const allProducts = results.data as ParsedProduct[];
 
+        // Validation des colonnes requises
+        const requiredColumns = ['name', 'sku'];
+        const firstRow = allProducts[0];
+        if (!firstRow) {
+          setError("Le fichier CSV est vide.");
+          setIsLoading(false);
+          return;
+        }
+
+        const missingColumns = requiredColumns.filter(col => !(col in firstRow));
+        if (missingColumns.length > 0) {
+          setError(`Colonnes manquantes : ${missingColumns.join(', ')}. Le CSV doit contenir au moins : name, sku`);
+          setIsLoading(false);
+          return;
+        }
+
         try {
-          const result = await importProducts(allProducts, locale);
+          const result = await bulkImportProducts(allProducts, locale);
 
           if (result.error) {
             setError(result.error);
@@ -269,7 +290,7 @@ export function ImportProductsDialog({ locale }: ImportProductsDialogProps) {
                       <TableHead>Nom</TableHead>
                       <TableHead>SKU</TableHead>
                       <TableHead>Description</TableHead>
-                      <TableHead>Origine</TableHead>
+                      <TableHead>Pays d'origine</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -280,7 +301,7 @@ export function ImportProductsDialog({ locale }: ImportProductsDialogProps) {
                         <TableCell className="max-w-xs truncate">
                           {product.description || "-"}
                         </TableCell>
-                        <TableCell>{product.origin || "-"}</TableCell>
+                        <TableCell>{product.origin_country || "-"}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

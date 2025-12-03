@@ -69,6 +69,14 @@ export function Footer({ locale }: FooterProps) {
                   Conditions de Vente (CGV)
                 </Link>
               </li>
+              <li>
+                <Link
+                  href={`/${locale}/legal/legal-notice`}
+                  className="hover:text-foreground transition-colors"
+                >
+                  Mentions Légales
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -98,5 +106,6 @@ export function Footer({ locale }: FooterProps) {
     </footer>
   );
 }
+
 
 

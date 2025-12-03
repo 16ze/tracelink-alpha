@@ -1,4 +1,5 @@
 import { ProButton } from "@/components/landing/pro-button";
+import { StarterButton } from "@/components/landing/starter-button";
 import { DynamicHeader } from "@/components/landing/dynamic-header";
 import { Footer } from "@/components/layout/footer";
 import { Logo } from "@/components/logo";
@@ -267,7 +268,7 @@ export default async function LandingPage({
                 <ul className="space-y-3">
                   <li className="flex items-center gap-2">
                     <Check className="h-5 w-5 text-primary" />
-                    <span className="text-sm">10 {t("feature_products")}</span>
+                    <span className="text-sm">3 {t("feature_products")}</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="h-5 w-5 text-primary" />
@@ -292,6 +293,42 @@ export default async function LandingPage({
               </CardContent>
             </Card>
 
+            {/* Plan Starter (9€) */}
+            <Card className="border-2 relative">
+              <CardHeader>
+                <CardTitle className="text-2xl">{t("plan_starter")}</CardTitle>
+                <div className="mt-4">
+                  <span className="text-4xl font-bold">{t("price_starter")}</span>
+                  <span className="text-muted-foreground">{t("period")}</span>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <ul className="space-y-3">
+                  <li className="flex items-center gap-2">
+                    <Check className="h-5 w-5 text-primary" />
+                    <span className="text-sm">25 {t("feature_products")}</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="h-5 w-5 text-primary" />
+                    <span className="text-sm">QR Code de base</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="h-5 w-5 text-primary" />
+                    <span className="text-sm">Support Email</span>
+                  </li>
+                  <li className="flex items-center gap-2 text-muted-foreground">
+                    <span className="h-5 w-5 flex items-center justify-center">
+                      —
+                    </span>
+                    <span className="text-sm">
+                      Pas de certificats PDF
+                    </span>
+                  </li>
+                </ul>
+                <StarterButton locale={locale} label={t("cta_starter")} className="w-full mt-8" />
+              </CardContent>
+            </Card>
+
             {/* Plan Pro (29€) - Mis en valeur */}
             <Card className="border-2 border-primary relative shadow-lg scale-105 md:scale-100">
               <div className="absolute -top-4 left-1/2 -translate-x-1/2">
@@ -310,11 +347,11 @@ export default async function LandingPage({
                 <ul className="space-y-3">
                   <li className="flex items-center gap-2">
                     <Check className="h-5 w-5 text-primary" />
-                    <span className="text-sm">Produits illimités</span>
+                    <span className="text-sm">{t("feature_unlimited")} {t("feature_products")}</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="h-5 w-5 text-primary" />
-                    <span className="text-sm">Certificats PDF</span>
+                    <span className="text-sm">{t("feature_certificates")}</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="h-5 w-5 text-primary" />
@@ -330,47 +367,6 @@ export default async function LandingPage({
                   </li>
                 </ul>
                 <ProButton locale={locale} label={t("cta_pro")} className="w-full mt-8" />
-              </CardContent>
-            </Card>
-
-            {/* Plan Entreprise (Sur devis) */}
-            <Card className="border-2 relative">
-              <CardHeader>
-                <CardTitle className="text-2xl">
-                  {t("plan_enterprise")}
-                </CardTitle>
-                <div className="mt-4">
-                  <span className="text-4xl font-bold">Sur devis</span>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <ul className="space-y-3">
-                  <li className="flex items-center gap-2">
-                    <Check className="h-5 w-5 text-primary" />
-                    <span className="text-sm">Tout du plan Pro</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="h-5 w-5 text-primary" />
-                    <span className="text-sm">API Access</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="h-5 w-5 text-primary" />
-                    <span className="text-sm">SSO (Single Sign-On)</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="h-5 w-5 text-primary" />
-                    <span className="text-sm">SLA 99.9%</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="h-5 w-5 text-primary" />
-                    <span className="text-sm">Account Manager dédié</span>
-                  </li>
-                </ul>
-                <Button variant="outline" className="w-full mt-8" asChild>
-                  <Link href="mailto:sales@tracelink.com">
-                    Demander un devis
-                  </Link>
-                </Button>
               </CardContent>
             </Card>
           </div>
