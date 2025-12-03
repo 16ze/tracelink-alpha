@@ -300,7 +300,7 @@ export async function updateBrandSettings(
   const isProPlan = subscriptionStatus === "active";
 
   // Si l'utilisateur essaie de masquer le branding mais n'est pas Pro
-  if (removeBranding && !isProPlan) {
+  if (remove_branding && !isProPlan) {
     return {
       error: "Masquer le logo TraceLink est réservé aux membres Pro.",
     };
